@@ -1,0 +1,205 @@
+@import "tailwindcss";
+
+/* ============================================================================
+   Smooth scrolling — disabled for users who prefer reduced motion (see below)
+   ============================================================================ */
+html {
+  scroll-behavior: smooth;
+}
+
+/* ============================================================================
+   Brand selection colour
+   ============================================================================ */
+::selection {
+  background-color: #ff6b0022;
+  color: #0f172a;
+}
+
+/* ============================================================================
+   Agnipankh Labs — Design tokens
+   Source: docs/pdf/Agnipankh_Labs_Brand_Kit_Content_Pack_v1.0.pdf §3 (colors), §4 (type)
+   ============================================================================
+
+   ACCESSIBILITY CONTRACT — read before using the orange.
+
+   Measured, not assumed (run `npm run check:contrast`):
+
+     #FF6B00 as TEXT on white ............ 2.86:1  FAILS AA (needs 4.5)
+     WHITE text on a #FF6B00 fill ........ 2.86:1  FAILS AA (needs 4.5)
+     #FF6B00 fill vs a white page ........ 2.86:1  FAILS 1.4.11 (needs 3.0)
+
+   That third line is the one that matters most: the Brand Kit's Innovation Orange
+   cannot carry white text, so it cannot be a conventional primary button. The orange
+   is therefore split into three tokens that are NOT interchangeable:
+
+     --color-brand       #FF6B00  Decorative fills, graphic accents, and badges that
+                                  carry NAVY text (navy-on-orange is 5.99:1). Never
+                                  white text on this, and never as text itself.
+     --color-brand-ink   #B35100  The working orange. Text and icons on white (5.13:1)
+                                  or on muted gray (4.66:1), AND the primary button
+                                  fill with white text (5.13:1).
+     --color-brand-hover #8F4100  Primary button hover (7.18:1 with white text).
+
+   Rule of thumb: brand-ink is what the user reads and clicks. brand is what they
+   only look at.
+   ============================================================================ */
+
+@theme {
+  /* Brand palette — #FF6B00 is the exact Brand Kit hex; the ink/hover pair are
+     AA-compliant derivations of it, required because the source hex fails contrast. */
+  --color-brand: #ff6b00; /* Innovation Orange — decoration + navy-on-orange only */
+  --color-brand-ink: #b35100; /* AA-safe orange: text, icons, primary button fill */
+  --color-brand-hover: #8f4100; /* primary button hover */
+
+  --color-navy: #0f172a; /* Deep Navy Blue — headers, dark sections */
+  --color-royal: #2563eb; /* Royal Blue — links, highlights */
+  --color-royal-ink: #1d4ed8; /* AA-safe royal for small text on white */
+
+  --color-surface: #ffffff;
+  --color-muted: #f3f4f6; /* Light Gray */
+  --color-body: #374151; /* Dark Gray — default body text */
+
+  /* Typography — Brand Kit §4: Poppins headings, Inter body */
+  --font-heading: var(--font-poppins), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+}
+
+/* The Brand Kit specifies a single light identity. No dark mode is defined in any
+   source document, so we do not invent one — `prefers-color-scheme` is not honoured
+   until a dark palette is approved. */
+:root {
+  color-scheme: light;
+}
+
+body {
+  background: var(--color-surface);
+  color: var(--color-body);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  text-wrap: balance;
+}
+
+/* Visible keyboard focus on the brand color, at a weight that passes 3:1 against
+   both white and navy backgrounds. */
+:focus-visible {
+  outline: 2px solid var(--color-brand-ink);
+  outline-offset: 2px;
+}
+
+/* Respect users who ask for less motion. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ============================================================================
+   Animation keyframes — used by RevealSection and page-level entrance effects.
+   All durations intentionally short (≤ 500ms) to feel snappy, not slow.
+   ============================================================================ */
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* ============================================================================
+   Scroll-reveal utility — elements start invisible; JS adds data-revealed="true"
+   via IntersectionObserver which triggers the animation.
+   ============================================================================ */
+.reveal {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.45s ease, transform 0.45s ease;
+}
+
+.reveal.revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.reveal-scale {
+  opacity: 0;
+  transform: scale(0.96);
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+.reveal-scale.revealed {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* Stagger children — add data-stagger to parent, children get staggered delays */
+[data-stagger] > *:nth-child(1) { transition-delay: 0ms; }
+[data-stagger] > *:nth-child(2) { transition-delay: 80ms; }
+[data-stagger] > *:nth-child(3) { transition-delay: 160ms; }
+[data-stagger] > *:nth-child(4) { transition-delay: 240ms; }
+[data-stagger] > *:nth-child(5) { transition-delay: 320ms; }
+[data-stagger] > *:nth-child(6) { transition-delay: 400ms; }
+
+/* Page entrance animation — applied to elements on first render */
+.animate-fade-up {
+  animation: fade-up 0.5s ease both;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.4s ease both;
+}
+
+.animate-scale-in {
+  animation: scale-in 0.4s ease both;
+}
+
+/* Animation delay helpers */
+.delay-100 { animation-delay: 100ms; }
+.delay-200 { animation-delay: 200ms; }
+.delay-300 { animation-delay: 300ms; }
+.delay-400 { animation-delay: 400ms; }
+.delay-500 { animation-delay: 500ms; }

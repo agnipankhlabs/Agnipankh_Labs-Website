@@ -1,0 +1,1684 @@
+// ============================================================================
+// Agnipankh Labs — Prisma schema
+//
+// Derived from AL-PRD-002 v1.0, then extended because the PRD's 16 entities are
+// demonstrably insufficient: the other 16 documents in docs/pdf/ demand entities the
+// PRD never declares. Each addition below cites the document that forced it.
+//
+// THREE THINGS ARE FROZEN HERE AND MUST NOT BE CHANGED CASUALLY:
+//   1. Certificate — permanently retained, cannot be cleanly reissued. The ID
+//      format, hash input and QR payload must be final before the first issuance.
+//   2. Retention metadata — retrofitting this after 100k profiles exist is painful.
+//   3. Role as a table, not an enum — the document set demands 9+ roles and a
+//      4-value enum cannot express the Finance Pack's joint-approval matrix.
+// ============================================================================
+
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+/// Prisma 7: the connection URL lives in prisma.config.ts, not here.
+/// The runtime client gets it through the pg driver adapter in lib/db.ts.
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================================================
+// RETENTION — Cybersecurity Framework (AL-SEC-001) mandates five distinct terms.
+// Every model holding personal or financial data carries these three fields so a
+// scheduled purge job can act without per-model special cases.
+// ============================================================================
+
+enum RetentionClass {
+  PERMANENT // certificates — indefinite, never purged
+  YEARS_7 // payments, invoices — statutory
+  YEARS_5 // student academic records
+  YEARS_3 // controlled documents (QMS)
+  YEARS_2 // support tickets, chat
+  YEARS_1 // web server / access logs
+}
+
+// ============================================================================
+// IDENTITY & ACCESS
+// Role is a TABLE. The PRD names 4 roles; the document set requires at least:
+// Student, Mentor, Admin, Super Admin (PRD) + Trainer (HR §6, QMS §8),
+// Dept Head (HR §3), Finance (Cybersecurity MFA policy), Employer/Recruiter,
+// College/TPO, Campus Ambassador (Marketing §9), External Quality Advisor (QMS §17).
+// ============================================================================
+
+model Role {
+  id          String  @id @default(cuid())
+  key         String  @unique // "student" | "mentor" | "trainer" | "finance" | ...
+  name        String
+  description String?
+  /// Staff roles are internal; non-staff roles can self-register (subject to approval).
+  isStaff     Boolean @default(false)
+  /// Cybersecurity Framework: MFA is mandatory for Finance and Super Admin.
+  requiresMfa Boolean @default(false)
+  /// Cybersecurity Framework: 90-day password rotation for admin-tier roles.
+  passwordRotationDays Int?
+
+  permissions RolePermission[]
+  users       UserRole[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("roles")
+}
+
+model Permission {
+  id          String  @id @default(cuid())
+  key         String  @unique // "internship.approve", "certificate.issue", "expense.approve"
+  description String?
+
+  roles RolePermission[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+/// A user may legitimately hold several roles (a mentor who is also a trainer;
+/// a dept head who is also finance). This is why role cannot be a scalar column.
+model UserRole {
+  userId String
+  roleId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role   Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  grantedAt DateTime @default(now())
+  grantedBy String?
+
+  @@id([userId, roleId])
+  @@map("user_roles")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  emailVerified DateTime?
+  /// bcrypt only. Cybersecurity Framework: never store plaintext.
+  passwordHash  String?
+  name          String?
+  image         String?
+
+  // --- Security state (Cybersecurity Framework AL-SEC-001) ---
+  passwordUpdatedAt   DateTime?
+  passwordExpiresAt   DateTime? // 90-day rotation for admin-tier roles
+  mfaEnabled          Boolean   @default(false)
+  mfaSecret           String?
+  failedLoginAttempts Int       @default(0)
+  lockedUntil         DateTime?
+  lastLoginAt         DateTime?
+  lastLoginIp         String?
+
+  /// Admin suspension. The HR and Ops manuals both describe termination for
+  /// misconduct; the PRD has no state to represent it.
+  suspendedAt     DateTime?
+  suspendedReason String?
+
+  roles         UserRole[]
+  profile       Profile?
+  mentorProfile Mentor?
+  staffProfile  StaffProfile?
+
+  applications  Application[]
+  enrollments   Enrollment[]
+  certificates  Certificate[]
+  submissions   TaskSubmission[]
+  tickets       SupportTicket[]  @relation("TicketRequester")
+  assignedTickets SupportTicket[] @relation("TicketAssignee")
+  notifications Notification[]
+  payments      Payment[]
+  posts         Post[]
+  consents      Consent[]
+  auditLogs     AuditLog[]
+  surveyResponses FeedbackSurvey[]
+  placementOutcome PlacementOutcome[]
+  campusAmbassador CampusAmbassador?
+  referralsMade    Referral[] @relation("ReferrerReferrals")
+  referralsReceived Referral[] @relation("ReferredReferrals")
+
+  // Auth.js
+  accounts Account[]
+  sessions Session[]
+
+  retentionClass    RetentionClass @default(YEARS_5)
+  retentionExpiresAt DateTime?
+  purgedAt          DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([email])
+  @@map("users")
+}
+
+/// Auth.js adapter models.
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+/// Cybersecurity Framework authorises exactly these PII fields for collection.
+model Profile {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  fullName    String
+  phone       String?
+  city        String?
+  state       String?
+  /// Educational qualifications — the last of the four authorised PII categories.
+  college     String?
+  degree      String? // Engineering, BCA, MCA, BSC-IT (Business Plan segments)
+  branch      String?
+  graduationYear Int?
+
+  headline   String?
+  bio        String?  @db.Text
+  skills     String[]
+  resumeUrl  String?
+  portfolioUrl String?
+  linkedinUrl  String?
+  githubUrl    String?
+
+  /// Ops Manual: Profile Verification is a gate before application review.
+  verificationStatus VerificationStatus @default(PENDING)
+  verifiedById       String?
+  verifiedAt         DateTime?
+
+  /// Marketing Playbook: referral attribution.
+  ownReferralCode String? @unique
+  referredByCode  String?
+
+  isAlumni Boolean @default(false)
+
+  retentionClass     RetentionClass @default(YEARS_5)
+  retentionExpiresAt DateTime?
+  purgedAt           DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("profiles")
+}
+
+enum VerificationStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+/// HR Framework §3 — five operational divisions.
+model Department {
+  id   String @id @default(cuid())
+  key  String @unique
+  name String
+  remit String?
+
+  staff       StaffProfile[]
+  jobOpenings JobOpening[]
+  expenses    Expense[]
+
+  @@map("departments")
+}
+
+/// HR Framework §8 binds "every employee and contractor". The PRD has no staff
+/// identity at all — only Student/Mentor/Admin/Super Admin.
+model StaffProfile {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  employmentType EmploymentType
+  departmentId   String?
+  department     Department?    @relation(fields: [departmentId], references: [id])
+  reportsToId    String?
+  title          String?
+  isDeptHead     Boolean        @default(false)
+  joinedAt       DateTime?
+  exitedAt       DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("staff_profiles")
+}
+
+enum EmploymentType {
+  EMPLOYEE
+  CONTRACTOR
+  INTERN
+}
+
+/// HR Framework §5 — mentors are vetted BEFORE mentoring. Self-registration as a
+/// mentor must not bypass this, so approvalStatus gates the role grant.
+model Mentor {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  domainExperience String?  @db.Text
+  expertise        String[]
+  yearsExperience  Int?
+  currentEmployer  String?
+  approvalStatus   ApprovalStatus @default(PENDING)
+  approvedById     String?
+  approvedAt       DateTime?
+
+  cohorts     Cohort[]
+  reviews     MentorReview[]
+  evaluations MentorEvaluation[]
+  internships Internship[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("mentors")
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// ============================================================================
+// GROWTH — one Lead table serves the newsletter, contact form, all four
+// partnership tracks, careers enquiries and the ambassador form. Building six
+// bespoke tables for six forms is the mistake this prevents.
+// ============================================================================
+
+model Lead {
+  id      String   @id @default(cuid())
+  kind    LeadKind
+  name    String
+  email   String
+  phone   String?
+  message String?  @db.Text
+
+  /// Populated for kind = PARTNERSHIP.
+  partnerType      PartnerType?
+  organizationName String?
+  designation      String?
+  city             String?
+
+  // Attribution — Marketing Playbook funnel.
+  sourceChannel String?
+  utmSource     String?
+  utmMedium     String?
+  utmCampaign   String?
+  referrerUrl   String?
+
+  status    LeadStatus @default(NEW)
+  handledById String?
+  handledAt   DateTime?
+  notes       String?    @db.Text
+
+  retentionClass     RetentionClass @default(YEARS_5)
+  retentionExpiresAt DateTime?
+  purgedAt           DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([kind, status])
+  @@index([email])
+  @@map("leads")
+}
+
+enum LeadKind {
+  CONTACT
+  NEWSLETTER
+  PARTNERSHIP
+  CAREERS
+  MENTOR_APPLICATION
+  TRAINER_APPLICATION
+  CAMPUS_AMBASSADOR
+  CORPORATE_HIRING
+}
+
+/// Investor Deck §8–11 treats these as four distinct audiences with separate pages.
+enum PartnerType {
+  COLLEGE
+  CORPORATE
+  CSR
+  SPONSOR
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  CONVERTED
+  CLOSED_LOST
+}
+
+model Subscriber {
+  id             String    @id @default(cuid())
+  email          String    @unique
+  confirmedAt    DateTime?
+  unsubscribedAt DateTime?
+  source         String?
+
+  retentionClass     RetentionClass @default(YEARS_5)
+  retentionExpiresAt DateTime?
+  purgedAt           DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@map("subscribers")
+}
+
+/// Investor Deck milestone "25+ College Partnerships"; Marketing Playbook §11
+/// defines a six-step MoU pathway. The PRD's generic Partnerships entity cannot
+/// hold a college's student reach or MoU state.
+model College {
+  id        String  @id @default(cuid())
+  name      String
+  city      String?
+  state     String?
+  mouStatus MouStatus @default(NONE)
+  mouSignedAt DateTime?
+  studentReachCount Int?
+  tpoName   String?
+  tpoEmail  String?
+
+  ambassadors CampusAmbassador[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("colleges")
+}
+
+enum MouStatus {
+  NONE
+  IN_DISCUSSION
+  PROPOSAL_SENT
+  SIGNED
+  LAPSED
+}
+
+/// Marketing Playbook §9–10 — ambassador programme with a 5/10/25/50+ tier matrix.
+model CampusAmbassador {
+  id        String  @id @default(cuid())
+  userId    String  @unique
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  collegeId String?
+  college   College? @relation(fields: [collegeId], references: [id])
+
+  tier         AmbassadorTier @default(TIER_1)
+  status       ApprovalStatus @default(PENDING)
+  referralCode String         @unique
+  referralCount Int           @default(0)
+  isSenior     Boolean        @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("campus_ambassadors")
+}
+
+enum AmbassadorTier {
+  TIER_1 // 5+
+  TIER_2 // 10+
+  TIER_3 // 25+
+  TIER_4 // 50+
+}
+
+model Referral {
+  id             String   @id @default(cuid())
+  referrerUserId String
+  referredUserId String?  @unique
+  code           String
+  rewardGranted  Boolean  @default(false)
+  rewardNote     String?
+  createdAt      DateTime @default(now())
+
+  referrer User   @relation("ReferrerReferrals", fields: [referrerUserId], references: [id], onDelete: Cascade)
+  referred User? @relation("ReferredReferrals", fields: [referredUserId], references: [id], onDelete: SetNull)
+
+  @@index([referrerUserId])
+  @@map("referrals")
+}
+
+// ============================================================================
+// PROGRAMS & DELIVERY
+// Cohort is load-bearing and absent from the PRD: certificates must print exact
+// cohort duration (QMS §9) and the >80% cohort-completion KPI depends on it.
+// ============================================================================
+
+model Internship {
+  id          String  @id @default(cuid())
+  slug        String  @unique
+  title       String
+  /// Business Plan is the only source of the domain taxonomy.
+  domain      InternshipDomain
+  summary     String? @db.Text
+  description String? @db.Text
+
+  /// Ops Manual mandates exactly these six fields on the creation form.
+  roleTitle          String?
+  durationMonths     Int?
+  learningObjectives String[]
+  skillRequirements  String[]
+  completionCriteria String? @db.Text
+
+  mode      DeliveryMode @default(ONLINE)
+  /// Pricing is INR. Stored in paise to avoid float rounding.
+  feePaise  Int?
+  isPublished Boolean    @default(false)
+
+  mentorId String?
+  mentor   Mentor? @relation(fields: [mentorId], references: [id])
+
+  cohorts      Cohort[]
+  applications Application[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([domain, isPublished])
+  @@map("internships")
+}
+
+enum InternshipDomain {
+  HR
+  MARKETING
+  DATA_SCIENCE
+  AI_ML
+  WEB_DEVELOPMENT
+  CYBERSECURITY
+}
+
+enum DeliveryMode {
+  ONLINE
+  OFFLINE
+  HYBRID
+}
+
+model Cohort {
+  id           String  @id @default(cuid())
+  name         String
+  internshipId String?
+  internship   Internship? @relation(fields: [internshipId], references: [id])
+  courseId     String?
+  course       Course?     @relation(fields: [courseId], references: [id])
+
+  /// Printed verbatim on certificates — QMS §9 requires exact cohort duration.
+  startDate DateTime
+  endDate   DateTime
+  capacity  Int?
+
+  mentorId String?
+  mentor   Mentor? @relation(fields: [mentorId], references: [id])
+
+  applications  Application[]
+  enrollments   Enrollment[]
+  certificates  Certificate[]
+  liveSessions  LiveSession[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("cohorts")
+}
+
+model LiveSession {
+  id       String   @id @default(cuid())
+  cohortId String
+  cohort   Cohort   @relation(fields: [cohortId], references: [id], onDelete: Cascade)
+  title    String
+  kind     SessionKind @default(MENTORSHIP)
+  scheduledAt DateTime
+  durationMinutes Int?
+  joinUrl  String?
+  recordingUrl String?
+
+  createdAt DateTime @default(now())
+
+  @@map("live_sessions")
+}
+
+enum SessionKind {
+  ONBOARDING
+  MENTORSHIP
+  MASTERCLASS
+  REVIEW
+}
+
+/// Ops Manual defines the five pipeline stages; the Internship Operations Pack
+/// adds the artefacts produced at each.
+model Application {
+  id           String @id @default(cuid())
+  userId       String
+  user         User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  internshipId String
+  internship   Internship @relation(fields: [internshipId], references: [id])
+  cohortId     String?
+  cohort       Cohort? @relation(fields: [cohortId], references: [id])
+
+  stage      ApplicationStage @default(APPLICATION_RECEIVED)
+  decidedById String?
+  decidedAt   DateTime?
+  rejectionReason String?
+
+  offerLetter OfferLetter?
+  agreement   InternshipAgreement?
+
+  retentionClass     RetentionClass @default(YEARS_5)
+  retentionExpiresAt DateTime?
+  purgedAt           DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, internshipId])
+  @@index([stage])
+  @@map("applications")
+}
+
+enum ApplicationStage {
+  APPLICATION_RECEIVED
+  ELIGIBILITY_CHECK
+  SELECTION_DECISION
+  OFFER_LETTER_ISSUED
+  JOINING_CONFIRMATION
+  WITHDRAWN
+  REJECTED
+}
+
+model OfferLetter {
+  id            String      @id @default(cuid())
+  applicationId String      @unique
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  documentUrl String?
+  issuedAt    DateTime  @default(now())
+  signatory   String?
+  startDate   DateTime?
+  reportingTo String?
+
+  retentionClass     RetentionClass @default(YEARS_5)
+  retentionExpiresAt DateTime?
+  purgedAt           DateTime?
+
+  @@map("offer_letters")
+}
+
+model InternshipAgreement {
+  id            String      @id @default(cuid())
+  applicationId String      @unique
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  termsVersion             String
+  acceptedAt               DateTime?
+  confidentialityAccepted  Boolean   @default(false)
+  terminatedAt             DateTime?
+  terminationReason        String?
+
+  retentionClass     RetentionClass @default(YEARS_5)
+  retentionExpiresAt DateTime?
+  purgedAt           DateTime?
+
+  @@map("internship_agreements")
+}
+
+// ============================================================================
+// LMS
+// ============================================================================
+
+model Course {
+  id          String  @id @default(cuid())
+  slug        String  @unique
+  title       String
+  summary     String? @db.Text
+  description String? @db.Text
+  level       String?
+  prerequisites String[]
+  /// INR, stored in paise.
+  pricePaise  Int?
+  isPublished Boolean @default(false)
+
+  lessons     Lesson[]
+  cohorts     Cohort[]
+  enrollments Enrollment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("courses")
+}
+
+model Lesson {
+  id       String @id @default(cuid())
+  courseId String
+  course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  title    String
+  ordinal  Int
+  kind     LessonKind @default(READING)
+  content  String?    @db.Text
+  videoUrl String?
+  durationMinutes Int?
+
+  progress LessonProgress[]
+  quiz     QuizQuestion[]
+  quizAttempts QuizAttempt[]
+
+  @@unique([courseId, ordinal])
+  @@map("lessons")
+}
+
+enum LessonKind {
+  READING
+  VIDEO
+  QUIZ
+  ASSIGNMENT
+  CODE_LAB
+}
+
+model QuizQuestion {
+  id       String   @id @default(cuid())
+  lessonId String
+  lesson   Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  prompt   String   @db.Text
+  options  String[]
+  correctIndex Int
+  points   Int      @default(1)
+
+  answers QuizAnswer[]
+  createdAt DateTime @default(now())
+
+  @@map("quiz_questions")
+}
+
+model QuizAttempt {
+  id           String   @id @default(cuid())
+  enrollmentId String
+  enrollment   Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  lessonId     String
+  lesson       Lesson     @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  startedAt    DateTime   @default(now())
+  completedAt  DateTime?
+  scorePct     Int?
+  passed       Boolean?
+  totalPoints  Int?
+  earnedPoints Int?
+
+  answers      QuizAnswer[]
+
+  @@index([enrollmentId, lessonId])
+  @@map("quiz_attempts")
+}
+
+model QuizAnswer {
+  id           String       @id @default(cuid())
+  attemptId    String
+  attempt      QuizAttempt  @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  questionId   String
+  question     QuizQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  selectedIndex Int
+  isCorrect    Boolean
+
+  @@unique([attemptId, questionId])
+  @@map("quiz_answers")
+}
+
+model Enrollment {
+  id       String @id @default(cuid())
+  userId   String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  courseId String
+  course   Course @relation(fields: [courseId], references: [id])
+  cohortId String?
+  cohort   Cohort? @relation(fields: [cohortId], references: [id])
+
+  status      EnrollmentStatus @default(ACTIVE)
+  progressPct Int              @default(0)
+  completedAt DateTime?
+
+  lessonProgress LessonProgress[]
+  quizAttempts QuizAttempt[]
+
+  retentionClass     RetentionClass @default(YEARS_5)
+  retentionExpiresAt DateTime?
+  purgedAt           DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, courseId])
+  @@map("enrollments")
+}
+
+enum EnrollmentStatus {
+  ACTIVE
+  COMPLETED
+  DROPPED
+  SUSPENDED
+}
+
+model LessonProgress {
+  id           String     @id @default(cuid())
+  enrollmentId String
+  enrollment   Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  lessonId     String
+  lesson       Lesson     @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  completedAt DateTime?
+  scorePct    Int?
+
+  @@unique([enrollmentId, lessonId])
+  @@map("lesson_progress")
+}
+
+// ============================================================================
+// SUBMISSIONS & EVALUATION — Internship Operations Pack
+// ============================================================================
+
+model TaskSubmission {
+  id       String @id @default(cuid())
+  userId   String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cohortId String?
+
+  projectName        String
+  projectReportUrl   String?
+  sourceCodeUrl      String?
+  presentationUrl    String?
+  demonstrationVideoUrl String?
+  repoUrl            String?
+
+  submittedAt DateTime @default(now())
+
+  evaluation ProjectEvaluation?
+
+  retentionClass     RetentionClass @default(YEARS_5)
+  retentionExpiresAt DateTime?
+  purgedAt           DateTime?
+
+  @@map("task_submissions")
+}
+
+/// Internship Operations Pack — weighted rubric 30/20/20/15/15.
+/// GAP: no document maps this total to the binary Successfully Completed /
+/// Needs Improvement gate. `passThreshold` is therefore configurable, not hardcoded.
+model ProjectEvaluation {
+  id           String         @id @default(cuid())
+  submissionId String         @unique
+  submission   TaskSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  technicalQuality Int // weight 30
+  innovation       Int // weight 20
+  documentation    Int // weight 20
+  presentation     Int // weight 15
+  completion       Int // weight 15
+  weightedTotal    Int
+
+  evaluatedById String?
+  evaluatedAt   DateTime @default(now())
+  remarks       String?  @db.Text
+
+  @@map("project_evaluations")
+}
+
+/// Internship Operations Pack — eight criteria, each scored 1–10.
+model PerformanceEvaluation {
+  id       String @id @default(cuid())
+  userId   String
+  cohortId String?
+  mentorId String?
+
+  attendance      Int
+  communication   Int
+  learningAbility Int
+  teamwork        Int
+  technicalSkills Int
+  problemSolving  Int
+  professionalism Int
+  overallPerformance Int
+  mentorRemarks   String? @db.Text
+
+  evaluatedAt DateTime @default(now())
+
+  @@map("performance_evaluations")
+}
+
+model CompletionReport {
+  id       String @id @default(cuid())
+  userId   String
+  cohortId String?
+
+  workCompleted  String[]
+  skillsAcquired String[]
+  mentorFeedback String? @db.Text
+  finalResult    FinalResult
+
+  issuedAt DateTime @default(now())
+
+  @@map("completion_reports")
+}
+
+enum FinalResult {
+  SUCCESSFULLY_COMPLETED
+  NEEDS_IMPROVEMENT
+}
+
+model MentorReview {
+  id       String @id @default(cuid())
+  mentorId String
+  mentor   Mentor @relation(fields: [mentorId], references: [id], onDelete: Cascade)
+  studentId String
+  reviewDate DateTime @default(now())
+  feedback   String?  @db.Text
+
+  @@index([mentorId, reviewDate])
+  @@map("mentor_reviews")
+}
+
+// ============================================================================
+// CERTIFICATES — FROZEN. Permanently retained; cannot be cleanly reissued.
+// PRD Module 7 + QMS §9 + Cybersecurity Framework.
+// ============================================================================
+
+model Certificate {
+  id String @id @default(cuid())
+
+  /// Public, non-sequential, tamper-evident identifier used in the verify URL.
+  /// Non-sequential is deliberate: sequential IDs let anyone enumerate every
+  /// credential ever issued.
+  certificateId String @unique
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  cohortId String?
+  cohort   Cohort? @relation(fields: [cohortId], references: [id])
+
+  /// PRD names three types; the QMS and Investor Deck add three more.
+  type CertificateType
+
+  /// QMS §9 mandates these six fields render on the verify page.
+  verifiedFullLegalName String
+  programName           String
+  trackName             String?
+  cohortStartDate       DateTime?
+  cohortEndDate         DateTime?
+  issueDate             DateTime  @default(now())
+
+  /// Cybersecurity Framework: SHA-256 hash match + UTC timestamp signature.
+  /// Hash input is defined once in lib/certificates/hash.ts — do not compute ad hoc.
+  sha256Hash  String
+  issuedAtUtc DateTime @default(now())
+
+  /// QMS §9 requires an authorised cryptographic or digital signature.
+  signatureAuthority String?
+  signatureRef       String?
+
+  qrCodeUrl   String?
+  documentUrl String?
+  downloadCount Int @default(0)
+
+  /// GAP: no source document defines revocation semantics. Modelled now because
+  /// certificates are permanent — deciding this after issuance is far worse.
+  revokedAt      DateTime?
+  revokedReason  String?
+  supersededById String?      @unique
+  supersededBy   Certificate? @relation("Supersedes", fields: [supersededById], references: [id])
+  supersedesId   String?      @unique
+  supersedes     Certificate? @relation("Supersedes")
+
+  downloads CertificateDownload[]
+
+  /// Permanent. Never purged.
+  retentionClass RetentionClass @default(PERMANENT)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@map("certificates")
+}
+
+enum CertificateType {
+  INTERNSHIP
+  COURSE
+  EXCELLENCE
+  RECOGNITION
+  LEADERSHIP
+  CITATION
+}
+
+/// QMS KPI: "Certificate Download Velocity".
+model CertificateDownload {
+  id            String      @id @default(cuid())
+  certificateId String
+  certificate   Certificate @relation(fields: [certificateId], references: [id], onDelete: Cascade)
+  downloadedAt  DateTime    @default(now())
+  ipAddress     String?
+
+  @@map("certificate_downloads")
+}
+
+// ============================================================================
+// CONTENT
+// ============================================================================
+
+model Post {
+  id       String @id @default(cuid())
+  slug     String @unique
+  title    String
+  excerpt  String? @db.Text
+  content  String  @db.Text
+  coverImageUrl String?
+
+  category String?
+  tags     String[]
+
+  authorId String?
+  author   User?   @relation(fields: [authorId], references: [id])
+
+  metaTitle       String?
+  metaDescription String?
+  ogImageUrl      String?
+  canonicalUrl    String?
+
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([publishedAt])
+  @@map("posts")
+}
+
+/// No real testimonial exists yet — four documents require social proof but no
+/// student quote, name or placement outcome is recorded anywhere. Modelled so the
+/// Days 61-90 beta can harvest them; the section does not render while empty.
+model Testimonial {
+  id         String  @id @default(cuid())
+  authorName String
+  authorRole String?
+  quote      String  @db.Text
+  avatarUrl  String?
+  /// Explicit publish consent — we are quoting a named real person.
+  consentGivenAt DateTime?
+  isPublished Boolean @default(false)
+  ordinal     Int     @default(0)
+
+  createdAt DateTime @default(now())
+
+  @@map("testimonials")
+}
+
+model Event {
+  id           String    @id @default(cuid())
+  slug         String    @unique
+  title        String
+  kind         EventKind
+  description  String?   @db.Text
+  coverImageUrl String?
+  startsAt     DateTime
+  endsAt       DateTime?
+  location     String?
+  isOnline     Boolean   @default(true)
+  capacity     Int?
+  isPublished  Boolean   @default(false)
+
+  registrations EventRegistration[]
+
+  createdAt DateTime @default(now())
+
+  @@map("events")
+}
+
+enum EventKind {
+  WEBINAR
+  BOOTCAMP
+  HACKATHON
+  INNOVATION_CHALLENGE
+  COMPETITION
+  MASTERCLASS
+}
+
+model EventRegistration {
+  id      String @id @default(cuid())
+  eventId String
+  event   Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  name    String
+  email   String
+  phone   String?
+
+  createdAt DateTime @default(now())
+
+  @@unique([eventId, email])
+  @@map("event_registrations")
+}
+
+/// HR Framework §4 — careers pipeline. Not in the PRD's 11 modules at all.
+model JobOpening {
+  id           String  @id @default(cuid())
+  slug         String  @unique
+  title        String
+  departmentId String?
+  department   Department? @relation(fields: [departmentId], references: [id])
+
+  tasks        String[]
+  requirements String[]
+  benefits     String[]
+  reportingTo  String?
+  isOpen       Boolean  @default(true)
+
+  applications JobApplication[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("job_openings")
+}
+
+model JobApplication {
+  id        String     @id @default(cuid())
+  openingId String
+  opening   JobOpening @relation(fields: [openingId], references: [id], onDelete: Cascade)
+
+  name      String
+  email     String
+  phone     String?
+  resumeUrl String?
+  coverNote String? @db.Text
+  stage     HiringStage @default(SCREENING)
+
+  retentionClass     RetentionClass @default(YEARS_5)
+  retentionExpiresAt DateTime?
+  purgedAt           DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@map("job_applications")
+}
+
+enum HiringStage {
+  SCREENING
+  INITIAL_SCREENING
+  TECHNICAL_ROUND
+  FINAL_TALK
+  OFFER
+  HIRED
+  REJECTED
+}
+
+/// PRD Partnerships, extended per Investor Deck §8–11.
+model Partnership {
+  id               String      @id @default(cuid())
+  partnerType      PartnerType
+  organizationName String
+  contactPersonName String?
+  designation      String?
+  email            String
+  phone            String?
+  city             String?
+  message          String?     @db.Text
+  status           LeadStatus  @default(NEW)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("partnerships")
+}
+
+// ============================================================================
+// SUPPORT — Module 10 exists in the PRD but has NO backing entity there.
+// Ops Manual defines the categories and the 24h/12h/6h response commitment;
+// QMS §12 adds the four service categories and SLA breach tracking.
+// ============================================================================
+
+model SupportTicket {
+  id     String @id @default(cuid())
+  userId String?
+  user   User?  @relation("TicketRequester", fields: [userId], references: [id])
+
+  /// Unauthenticated visitors can raise tickets from /contact.
+  requesterEmail String
+  requesterName  String?
+
+  subject  String
+  body     String  @db.Text
+  category TicketCategory
+  channel  TicketChannel  @default(WEBSITE_FORM)
+  priority TicketPriority @default(NORMAL)
+  status   TicketStatus   @default(OPEN)
+
+  assignedToId String?
+  assignedTo   User?   @relation("TicketAssignee", fields: [assignedToId], references: [id])
+
+  /// Ops Manual SLA: General 24h, Technical 12h, Urgent 6h.
+  responseSlaHours Int?
+  slaDueAt         DateTime?
+  firstRespondedAt DateTime?
+  resolvedAt       DateTime?
+  slaBreached      Boolean   @default(false)
+  firstContactResolution Boolean @default(false)
+
+  retentionClass     RetentionClass @default(YEARS_2)
+  retentionExpiresAt DateTime?
+  purgedAt           DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, priority])
+  @@map("support_tickets")
+}
+
+enum TicketCategory {
+  GENERAL
+  TECHNICAL
+  URGENT
+  CERTIFICATE
+  ACADEMIC
+}
+
+enum TicketChannel {
+  EMAIL
+  WHATSAPP
+  WEBSITE_FORM
+  DASHBOARD
+}
+
+enum TicketPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  WAITING_ON_USER
+  RESOLVED
+  CLOSED
+}
+
+// ============================================================================
+// QUALITY — QMS AL-QMS-001. None of this exists in the PRD's 16 entities.
+// ============================================================================
+
+model FeedbackSurvey {
+  id       String @id @default(cuid())
+  userId   String?
+  user     User?  @relation(fields: [userId], references: [id])
+  cohortId String?
+
+  touchpoint SurveyTouchpoint
+  score      Int // 1–10
+  comments   String? @db.Text
+  interventionTriggered Boolean @default(false)
+
+  submittedAt DateTime @default(now())
+
+  @@map("feedback_surveys")
+}
+
+enum SurveyTouchpoint {
+  ONBOARDING
+  MID_COHORT_SPRINT
+  COMPLETION
+  POST_PROGRAM_3_6_MONTHS
+}
+
+model MentorEvaluation {
+  id       String @id @default(cuid())
+  mentorId String
+  mentor   Mentor @relation(fields: [mentorId], references: [id], onDelete: Cascade)
+
+  engagement    Int
+  communication Int
+  reviewDetail  Int
+  learnerImpact Int
+  score         Int
+  classification MentorClassification
+  administrativeAction String?
+  reviewPeriod  String
+
+  createdAt DateTime @default(now())
+
+  @@map("mentor_evaluations")
+}
+
+enum MentorClassification {
+  OUTSTANDING
+  STRONG
+  SATISFACTORY
+  IMPROVEMENT_NEEDED
+}
+
+/// QMS §15 risk register, IDs formatted AL-Q-###.
+model QualityIssue {
+  id        String @id @default(cuid())
+  issueRef  String @unique
+  summary   String @db.Text
+  severity  Severity
+  detectedAt DateTime @default(now())
+  actionTaken String? @db.Text
+  ownerId   String?
+  status    QualityStatus @default(OPEN)
+
+  capaCases CapaCase[]
+
+  @@map("quality_issues")
+}
+
+enum Severity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum QualityStatus {
+  OPEN
+  IN_PROGRESS
+  CLOSED
+}
+
+/// QMS §14 — six-step CAPA workflow.
+model CapaCase {
+  id      String       @id @default(cuid())
+  issueId String
+  issue   QualityIssue @relation(fields: [issueId], references: [id], onDelete: Cascade)
+
+  step            Int @default(1) // 1–6
+  ownerId         String?
+  closureSignOffBy String?
+  closedAt        DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@map("capa_cases")
+}
+
+model AuditRecord {
+  id        String   @id @default(cuid())
+  auditCycle String
+  scope     String
+  status    AuditStatus
+  remediationDueDate DateTime?
+  escalatedCapaId String?
+
+  retentionClass     RetentionClass @default(YEARS_3)
+  retentionExpiresAt DateTime?
+  purgedAt           DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@map("audit_records")
+}
+
+enum AuditStatus {
+  COMPLIANT
+  PARTIALLY_COMPLIANT
+  NON_COMPLIANT
+}
+
+/// QMS: post-program placement and career impact, tracked 3–6 months out.
+model PlacementOutcome {
+  id       String @id @default(cuid())
+  userId   String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cohortId String?
+
+  employerName String?
+  jobTitle     String?
+  placedAt     DateTime?
+  salaryLpa    Decimal? @db.Decimal(10, 2)
+  /// Publishing any of this as a success story requires explicit consent.
+  consentToPublish Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@map("placement_outcomes")
+}
+
+// ============================================================================
+// FINANCE — Finance & Governance Pack.
+// Payment status MUST carry FAILED/CANCELLED/REFUNDED: the pack's own invoice
+// template offers only Paid|Pending, which cannot represent a gateway failure.
+// ============================================================================
+
+model Payment {
+  id     String @id @default(cuid())
+  userId String?
+  user   User?  @relation(fields: [userId], references: [id])
+
+  /// INR in paise. Currency is explicit because no source document ever spells
+  /// out the ISO code — see the founder checklist.
+  amountPaise Int
+  currency    String @default("INR")
+
+  status        PaymentStatus @default(PENDING)
+  revenueStream RevenueStream
+  mode          PaymentMode?
+
+  /// Tokenised reference only. Cybersecurity Framework forbids storing raw card data.
+  gatewayName        String?
+  gatewayOrderId     String?
+  gatewayPaymentId   String?
+  gatewaySignature   String?
+
+  refundedAmountPaise Int?
+  refundedAt          DateTime?
+  failureReason       String?
+
+  invoice Invoice?
+
+  retentionClass     RetentionClass @default(YEARS_7)
+  retentionExpiresAt DateTime?
+  purgedAt           DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@map("payments")
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  CANCELLED
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
+
+enum PaymentMode {
+  UPI
+  NET_BANKING
+  CARD
+  WALLET
+  OTHER
+}
+
+enum RevenueStream {
+  INTERNSHIP_PROGRAMS
+  TRAINING_PROGRAMS
+  CERTIFICATION_SERVICES
+  ACADEMIC_PARTNERSHIPS
+  CORPORATE_SPONSORSHIPS
+  EVENTS_AND_WORKSHOPS
+}
+
+/// The Finance Pack mandates GST/TDS compliance but its own invoice template has
+/// no GSTIN, GST rate, HSN/SAC or place-of-supply field. Those are added here.
+model Invoice {
+  id            String  @id @default(cuid())
+  invoiceNumber String  @unique
+  paymentId     String? @unique
+  payment       Payment? @relation(fields: [paymentId], references: [id])
+
+  billToName    String
+  billToEmail   String?
+  billToAddress String? @db.Text
+  billToGstin   String?
+
+  description      String  @db.Text
+  subtotalPaise    Int
+  gstRatePercent   Decimal? @db.Decimal(5, 2)
+  cgstPaise        Int?
+  sgstPaise        Int?
+  igstPaise        Int?
+  totalPaise       Int
+  hsnSac           String?
+  placeOfSupply    String?
+
+  issuedAt      DateTime @default(now())
+  authorizedBy  String?
+
+  retentionClass     RetentionClass @default(YEARS_7)
+  retentionExpiresAt DateTime?
+  purgedAt           DateTime?
+
+  @@map("invoices")
+}
+
+model Quotation {
+  id              String   @id @default(cuid())
+  quotationNumber String   @unique
+  clientName      String
+  scope           String   @db.Text
+  totalPaise      Int
+  validUntil      DateTime
+  preparedBy      String?
+
+  createdAt DateTime @default(now())
+
+  @@map("quotations")
+}
+
+/// Finance Pack §6 approval matrix: <=Rs2,000 Team Lead; Rs2,001–10,000 Founder;
+/// >Rs10,000 Founder + Co-Founder jointly. The joint tier is why a second
+/// approver column exists.
+model Expense {
+  id           String  @id @default(cuid())
+  category     ExpenseCategory
+  amountPaise  Int
+  description  String? @db.Text
+  departmentId String?
+  department   Department? @relation(fields: [departmentId], references: [id])
+  vendorId     String?
+  vendor       Vendor?  @relation(fields: [vendorId], references: [id])
+
+  ownerId          String?
+  approverId       String?
+  secondApproverId String?
+  approvalTier     ApprovalTier
+  approvedAt       DateTime?
+  voucherUrl       String?
+
+  retentionClass     RetentionClass @default(YEARS_7)
+  retentionExpiresAt DateTime?
+  purgedAt           DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@map("expenses")
+}
+
+enum ExpenseCategory {
+  TECHNOLOGY
+  MARKETING_AND_GROWTH
+  OPERATIONS
+  HUMAN_RESOURCES
+}
+
+enum ApprovalTier {
+  TEAM_LEAD
+  FOUNDER
+  FOUNDER_JOINT
+}
+
+/// Cybersecurity Framework requires a vendor register with SOC2/ISO 27001 status.
+model Vendor {
+  id       String  @id @default(cuid())
+  name     String
+  service  String?
+  soc2     Boolean @default(false)
+  iso27001 Boolean @default(false)
+  uptimeSla String?
+  lastReviewedAt DateTime?
+
+  expenses Expense[]
+
+  createdAt DateTime @default(now())
+
+  @@map("vendors")
+}
+
+// ============================================================================
+// SECURITY & COMPLIANCE — Cybersecurity Framework AL-SEC-001
+// ============================================================================
+
+model AuditLog {
+  id       String @id @default(cuid())
+  userId   String?
+  user     User?  @relation(fields: [userId], references: [id])
+  roleKey  String?
+
+  action     String
+  resource   String
+  resourceId String?
+  ipAddress  String?
+  userAgent  String?
+  metadata   Json?
+
+  /// UTC, always.
+  occurredAt DateTime @default(now())
+
+  retentionClass     RetentionClass @default(YEARS_1)
+  retentionExpiresAt DateTime?
+  purgedAt           DateTime?
+
+  @@index([userId, occurredAt])
+  @@index([resource, resourceId])
+  @@map("audit_logs")
+}
+
+model SecurityIncident {
+  id              String   @id @default(cuid())
+  detectionSource String
+  summary         String   @db.Text
+  severity        Severity
+  containmentActions String? @db.Text
+  forensicFindings   String? @db.Text
+  dataImpact         String? @db.Text
+  rootCause          String? @db.Text
+  patchReference     String?
+  detectedAt      DateTime @default(now())
+  resolvedAt      DateTime?
+
+  @@map("security_incidents")
+}
+
+model BackupRecord {
+  id       String @id @default(cuid())
+  target   String
+  cadence  String
+  location String?
+  geoRedundant Boolean @default(false)
+  takenAt  DateTime @default(now())
+
+  @@map("backup_records")
+}
+
+/// DPDP Act 2023 requires a lawful basis and a consent-withdrawal mechanism.
+/// The Legal Pack contains neither, so consent is modelled explicitly.
+model Consent {
+  id     String @id @default(cuid())
+  userId String?
+  user   User?  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// Most consent is given BEFORE an account exists — a newsletter signup or a
+  /// contact form. Without this, an anonymous consent record is unattributable
+  /// and therefore worthless as evidence of lawful basis.
+  subjectEmail String?
+
+  purpose     ConsentPurpose
+  granted     Boolean
+  policyVersion String?
+  ipAddress   String?
+  grantedAt   DateTime  @default(now())
+  withdrawnAt DateTime?
+
+  @@index([subjectEmail])
+  @@map("consents")
+}
+
+enum ConsentPurpose {
+  PRIVACY_POLICY
+  MARKETING_EMAIL
+  ANALYTICS_COOKIES
+  TESTIMONIAL_PUBLICATION
+  PLACEMENT_STORY
+  CERTIFICATE_PUBLIC_VERIFICATION
+}
+
+// ============================================================================
+// PLATFORM
+// ============================================================================
+
+model Notification {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  title   String
+  body    String? @db.Text
+  href    String?
+  kind    String  @default("info")
+  readAt  DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, readAt])
+  @@map("notifications")
+}
+
+/// Values the Company Profile and Legal Pack mark "To Be Updated" live here, not
+/// in code, so they can be corrected without a deploy.
+model SiteSetting {
+  key       String   @id
+  value     String   @db.Text
+  updatedAt DateTime @updatedAt
+
+  @@map("site_settings")
+}
