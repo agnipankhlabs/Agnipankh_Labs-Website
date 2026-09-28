@@ -49,6 +49,7 @@ import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import { ScrollRevealInit } from "@/components/ui/scroll-reveal-init";
 import { NavigationProgress } from "@/components/ui/navigation-progress";
+import { BackToTop } from "@/components/ui/back-to-top";
 
 export default function RootLayout({
   children,
@@ -73,6 +74,7 @@ export default function RootLayout({
           {children}
         </main>
         <Footer />
+        <BackToTop />
       </body>
     </html>
   );
