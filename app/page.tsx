@@ -35,6 +35,7 @@ import {
 } from "@/content/marketing";
 import { Container } from "@/components/ui/layout";
 import { ButtonLink } from "@/components/ui/button";
+import { InteractiveImageBackground } from "@/components/ui/interactive-image-background";
 
 const SERVICE_ICONS = [Briefcase, GraduationCap, Award, Code2, Compass, Users];
 const DIFF_ICONS = [CheckCircle2, Layers, TrendingUp, Laptop, Target, Users2];
@@ -84,23 +85,17 @@ export default function HomePage() {
       {/* ══════════════════════════════════════════════════════════════════
           HERO SECTION — Soft Background Image with Blurry White Overlay
           ══════════════════════════════════════════════════════════════════ */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-[#f8f9fc] via-white to-surface py-[2.5cm]">
-        {/* Soft Background Image with Blurry White Tint */}
-        <div className="absolute inset-0 z-0">
-          <Image
-            src="/images/hero-illustration.jpg"
-            alt="Agnipankh Innovation Hub Background"
-            fill
-            sizes="100vw"
-            className="object-cover object-center opacity-25"
-            priority
-          />
-          {/* Blurry White Overlay */}
-          <div className="absolute inset-0 bg-white/80 backdrop-blur-sm" />
-          <div className="absolute inset-0 bg-gradient-to-b from-white/90 via-white/70 to-surface" />
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-white/40 via-white/80 to-surface" />
-        </div>
-
+      <InteractiveImageBackground
+        src="/images/bg-hero-phoenix.jpg"
+        alt="Agnipankh Innovation Phoenix Lab"
+        variant="hero"
+        priority
+        className="py-[2.5cm]"
+        enableParticles={true}
+        enableTilt={true}
+        enableSpotlight={true}
+        intensity={6}
+      >
         <Container className="relative z-10">
           <div className="mx-auto max-w-4xl text-center">
             {/* Logo — crisp and perfectly legible on blurry white */}
@@ -169,7 +164,7 @@ export default function HomePage() {
             </div>
           </div>
         </Container>
-      </section>
+      </InteractiveImageBackground>
 
       <Divider />
 
@@ -227,7 +222,16 @@ export default function HomePage() {
       {/* ══════════════════════════════════════════════════════════════════
           DIFFERENTIATORS SECTION — 2 cm vertical spacing
           ══════════════════════════════════════════════════════════════════ */}
-      <section className="bg-[#f8f9fc] py-[2cm]">
+      <InteractiveImageBackground
+        src="/images/bg-tech-lab.jpg"
+        alt="Agnipankh Tech Incubation and Robotics Lab"
+        variant="light-glass"
+        className="py-[2cm]"
+        enableParticles={true}
+        enableTilt={true}
+        enableSpotlight={true}
+        intensity={4}
+      >
         <Container>
           <Heading
             eyebrow="THE AGNIPANKH ADVANTAGE"
@@ -241,7 +245,7 @@ export default function HomePage() {
               return (
                 <div
                   key={diff.title}
-                  className="reveal group flex h-full items-start gap-4 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-navy/8 transition-all hover:ring-brand-ink/30 hover:shadow-md"
+                  className="reveal group flex h-full items-start gap-4 rounded-2xl bg-white/85 p-6 shadow-sm backdrop-blur-md ring-1 ring-navy/10 transition-all hover:bg-white/95 hover:ring-brand-ink/40 hover:shadow-lg"
                 >
                   <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand/10 text-brand-ink">
                     <Icon className="h-5 w-5" aria-hidden="true" />
@@ -255,7 +259,7 @@ export default function HomePage() {
             })}
           </div>
         </Container>
-      </section>
+      </InteractiveImageBackground>
 
       <Divider />
 
@@ -479,10 +483,19 @@ export default function HomePage() {
           ══════════════════════════════════════════════════════════════════ */}
       <section className="bg-white py-[2cm]">
         <Container>
-          <div className="relative overflow-hidden rounded-3xl bg-navy px-8 py-12 shadow-2xl sm:px-14 sm:py-16 lg:px-20 lg:py-16">
+          <InteractiveImageBackground
+            src="/images/bg-wings-innovation.jpg"
+            alt="Giving Wings to Innovation Aerospace Hangar"
+            variant="dark-deep"
+            className="rounded-3xl shadow-2xl px-8 py-12 sm:px-14 sm:py-16 lg:px-20 lg:py-16 border border-white/10"
+            enableParticles={true}
+            enableTilt={true}
+            enableSpotlight={true}
+            intensity={5}
+          >
             {/* Blobs */}
-            <div aria-hidden="true" className="pointer-events-none absolute -right-20 -top-20 h-72 w-72 rounded-full bg-brand/15 blur-3xl" />
-            <div aria-hidden="true" className="pointer-events-none absolute -bottom-16 -left-8 h-56 w-56 rounded-full bg-royal/10 blur-3xl" />
+            <div aria-hidden="true" className="pointer-events-none absolute -right-20 -top-20 h-72 w-72 rounded-full bg-brand/20 blur-3xl" />
+            <div aria-hidden="true" className="pointer-events-none absolute -bottom-16 -left-8 h-56 w-56 rounded-full bg-royal/20 blur-3xl" />
             {/* Dot grid */}
             <div
               aria-hidden="true"
@@ -524,8 +537,8 @@ export default function HomePage() {
               </div>
             </div>
 
-            <p className="relative z-10 mt-6 text-xs text-white/40">{NO_GUARANTEE_DISCLAIMER}</p>
-          </div>
+            <p className="relative z-10 mt-6 text-xs text-white/50">{NO_GUARANTEE_DISCLAIMER}</p>
+          </InteractiveImageBackground>
         </Container>
       </section>
     </>
