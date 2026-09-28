@@ -39,7 +39,7 @@ import { HomePageAnimatedBackground } from "@/components/ui/homepage-animated-ba
 const SERVICE_ICONS = [Briefcase, GraduationCap, Award, Code2, Compass, Users];
 const DIFF_ICONS = [CheckCircle2, Layers, TrendingUp, Laptop, Target, Users2];
 
-/* ─── Reusable section heading with frosted glass pill ─────────────────── */
+/* ─── Reusable section heading ─────────────────────────────────────────── */
 function Heading({
   eyebrow,
   title,
@@ -52,13 +52,9 @@ function Heading({
   center?: boolean;
 }) {
   return (
-    <div
-      className={`${
-        center ? "text-center mx-auto" : ""
-      } max-w-3xl rounded-2xl bg-white/80 px-6 py-5 shadow-lg backdrop-blur-md border border-white/60`}
-    >
+    <div className={center ? "text-center" : ""}>
       {eyebrow && (
-        <p className="mb-2 text-xs font-semibold uppercase tracking-[0.15em] text-brand-ink">
+        <p className="mb-3 text-xs font-semibold uppercase tracking-[0.15em] text-brand-ink">
           {eyebrow}
         </p>
       )}
@@ -66,11 +62,7 @@ function Heading({
         {title}
       </h2>
       {description && (
-        <p
-          className={`mt-3 text-base leading-relaxed text-body text-pretty ${
-            center ? "mx-auto max-w-2xl" : "max-w-2xl"
-          }`}
-        >
+        <p className={`mt-4 text-lg leading-relaxed text-body text-pretty ${center ? "mx-auto max-w-2xl" : "max-w-2xl"}`}>
           {description}
         </p>
       )}
@@ -78,29 +70,24 @@ function Heading({
   );
 }
 
-/* ─── Translucent divider line ─────────────────────────────────────────── */
+/* ─── Divider line ─────────────────────────────────────────────────────── */
 function Divider() {
-  return <div className="border-t border-white/20" />;
+  return <div className="border-t border-navy/10" />;
 }
 
 export default function HomePage() {
   return (
-    <div className="relative min-h-screen">
-      {/* ══════════════════════════════════════════════════════════════════
-          FULL HOMEPAGE ANIMATED BACKGROUND (Giving Wings to Innovation)
-          - Aerodynamic wing with golden amber fire & electric cyan particle trails
-          - Interactive constellation star network reacting to cursor
-          - Periodic cosmic shooting stars & dynamic mouse spotlight
-          ══════════════════════════════════════════════════════════════════ */}
+    <div className="relative">
+      {/* Interactive mouse hover constellation & particle animation layer */}
       <HomePageAnimatedBackground />
 
       {/* ══════════════════════════════════════════════════════════════════
-          HERO SECTION — Clean frosted glass card with starry animated backdrop
+          HERO SECTION — Clean soft gradient (no image), interactive hover
           ══════════════════════════════════════════════════════════════════ */}
-      <section className="relative overflow-hidden py-[2.5cm]">
+      <section className="relative overflow-hidden bg-gradient-to-b from-[#f8f9fc] via-white to-surface py-[2.5cm]">
         <Container className="relative z-10">
-          <div className="mx-auto max-w-4xl rounded-3xl bg-white/80 p-6 text-center shadow-2xl backdrop-blur-md border border-white/70 sm:p-10">
-            {/* Logo — crisp and perfectly legible on frosted glass */}
+          <div className="mx-auto max-w-4xl text-center">
+            {/* Logo */}
             <div className="mb-6 flex justify-center animate-fade-in">
               <Image
                 src="/images/logo-full.png"
@@ -151,7 +138,7 @@ export default function HomePage() {
             </div>
 
             {/* Glassmorphic Trust strip */}
-            <div className="animate-fade-up delay-500 mx-auto mt-14 grid max-w-3xl grid-cols-2 gap-4 rounded-2xl border border-navy/10 bg-white/90 p-6 backdrop-blur-md shadow-md sm:grid-cols-4 sm:gap-6">
+            <div className="animate-fade-up delay-500 mx-auto mt-14 grid max-w-3xl grid-cols-2 gap-4 rounded-2xl border border-navy/10 bg-white/85 p-6 backdrop-blur-md shadow-md sm:grid-cols-4 sm:gap-6">
               {[
                 { num: "Hands-On", sub: "Practical Learning" },
                 { num: "Modern", sub: "Industry Stacks" },
@@ -171,9 +158,9 @@ export default function HomePage() {
       <Divider />
 
       {/* ══════════════════════════════════════════════════════════════════
-          SERVICES SECTION — Translucent glass cards
+          SERVICES SECTION — 2 cm vertical spacing
           ══════════════════════════════════════════════════════════════════ */}
-      <section className="relative py-[2cm]">
+      <section className="bg-white py-[2cm]">
         <Container>
           <Heading
             eyebrow="WHAT WE OFFER"
@@ -187,7 +174,7 @@ export default function HomePage() {
               return (
                 <div
                   key={item.slug}
-                  className="reveal group flex h-full flex-col justify-between rounded-2xl border border-white/60 bg-white/85 p-6 shadow-md backdrop-blur-md transition-all hover:-translate-y-1 hover:border-brand-ink/40 hover:bg-white/95 hover:shadow-xl"
+                  className="reveal group flex h-full flex-col justify-between rounded-2xl border border-navy/10 bg-white p-6 shadow-sm transition-all hover:-translate-y-1 hover:border-brand-ink/30 hover:shadow-md"
                 >
                   <div>
                     {/* Icon */}
@@ -222,9 +209,9 @@ export default function HomePage() {
       <Divider />
 
       {/* ══════════════════════════════════════════════════════════════════
-          DIFFERENTIATORS SECTION — Translucent glass cards
+          DIFFERENTIATORS SECTION — 2 cm vertical spacing
           ══════════════════════════════════════════════════════════════════ */}
-      <section className="relative py-[2cm]">
+      <section className="bg-[#f8f9fc] py-[2cm]">
         <Container>
           <Heading
             eyebrow="THE AGNIPANKH ADVANTAGE"
@@ -238,7 +225,7 @@ export default function HomePage() {
               return (
                 <div
                   key={diff.title}
-                  className="reveal group flex h-full items-start gap-4 rounded-2xl bg-white/85 p-6 shadow-md backdrop-blur-md ring-1 ring-white/60 transition-all hover:bg-white/95 hover:ring-brand-ink/40 hover:shadow-xl"
+                  className="reveal group flex h-full items-start gap-4 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-navy/8 transition-all hover:ring-brand-ink/30 hover:shadow-md"
                 >
                   <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand/10 text-brand-ink">
                     <Icon className="h-5 w-5" aria-hidden="true" />
@@ -257,13 +244,13 @@ export default function HomePage() {
       <Divider />
 
       {/* ══════════════════════════════════════════════════════════════════
-          ABOUT SECTION — Frosted Story + Cosmic Vision Card
+          ABOUT SECTION — 2 cm vertical spacing
           ══════════════════════════════════════════════════════════════════ */}
-      <section className="relative py-[2cm]">
+      <section className="bg-white py-[2cm]">
         <Container>
           <div className="grid grid-cols-1 items-stretch gap-12 lg:grid-cols-2 lg:gap-16">
             {/* Left: Story */}
-            <div className="flex flex-col justify-between rounded-3xl bg-white/85 p-8 backdrop-blur-md shadow-lg border border-white/60">
+            <div className="flex flex-col justify-between">
               <div>
                 <p className="mb-3 text-xs font-semibold uppercase tracking-[0.15em] text-brand-ink">
                   ABOUT AGNIPANKH LABS
@@ -305,13 +292,13 @@ export default function HomePage() {
             </div>
 
             {/* Right: Dark vision card */}
-            <div className="relative flex flex-col justify-between overflow-hidden rounded-3xl bg-navy/90 p-8 text-white shadow-2xl backdrop-blur-md sm:p-10 border border-white/10">
+            <div className="relative flex flex-col justify-between overflow-hidden rounded-3xl bg-navy p-8 text-white shadow-2xl sm:p-10">
               {/* Decorative blobs */}
-              <div aria-hidden="true" className="pointer-events-none absolute -right-12 -top-12 h-48 w-48 rounded-full bg-brand/20 blur-3xl" />
-              <div aria-hidden="true" className="pointer-events-none absolute -bottom-10 -left-10 h-36 w-36 rounded-full bg-royal/20 blur-2xl" />
+              <div aria-hidden="true" className="pointer-events-none absolute -right-12 -top-12 h-48 w-48 rounded-full bg-brand/15 blur-3xl" />
+              <div aria-hidden="true" className="pointer-events-none absolute -bottom-10 -left-10 h-36 w-36 rounded-full bg-royal/15 blur-2xl" />
 
               <div className="relative">
-                <span className="inline-flex items-center gap-2 rounded-md bg-amber-400/20 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-amber-300">
+                <span className="inline-flex items-center gap-2 rounded-md bg-amber-400/15 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-amber-300">
                   Our Vision
                 </span>
                 <blockquote className="mt-5 font-heading text-lg font-semibold leading-snug text-white">
@@ -353,9 +340,9 @@ export default function HomePage() {
       <Divider />
 
       {/* ══════════════════════════════════════════════════════════════════
-          ROADMAP SECTION — Translucent glass cards
+          ROADMAP SECTION — 2 cm vertical spacing
           ══════════════════════════════════════════════════════════════════ */}
-      <section className="relative py-[2cm]">
+      <section className="bg-[#f8f9fc] py-[2cm]">
         <Container>
           <Heading
             eyebrow="OUR STRATEGIC ROADMAP"
@@ -367,7 +354,7 @@ export default function HomePage() {
             {companyRoadmap.map((item) => (
               <div
                 key={item.phase}
-                className="reveal group flex h-full items-center gap-4 rounded-2xl bg-white/85 p-5 shadow-md backdrop-blur-md ring-1 ring-white/60 transition-all hover:bg-white/95 hover:ring-brand-ink/40 hover:shadow-xl"
+                className="reveal group flex h-full items-center gap-4 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-navy/8 transition-all hover:ring-brand-ink/30 hover:shadow-md"
               >
                 {/* Phase number */}
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-navy font-heading text-sm font-bold text-white transition-colors group-hover:bg-brand-ink">
@@ -390,9 +377,9 @@ export default function HomePage() {
       <Divider />
 
       {/* ══════════════════════════════════════════════════════════════════
-          FAQ SECTION — Frosted glass accordion
+          FAQ SECTION — 2 cm vertical spacing
           ══════════════════════════════════════════════════════════════════ */}
-      <section className="relative py-[2cm]">
+      <section className="bg-white py-[2cm]">
         <Container>
           <Heading
             eyebrow="FREQUENTLY ASKED QUESTIONS"
@@ -400,21 +387,21 @@ export default function HomePage() {
             description="Clear answers regarding our programs, internship formats, and certification credentials."
           />
 
-          <div className="mx-auto mt-12 max-w-3xl divide-y divide-navy/10 overflow-hidden rounded-2xl border border-white/60 bg-white/85 shadow-lg backdrop-blur-md">
+          <div className="mx-auto mt-12 max-w-3xl divide-y divide-navy/10 overflow-hidden rounded-2xl border border-navy/10 bg-white shadow-sm">
             {faqs.map((faq, idx) => (
               <details
                 key={faq.q}
                 className="group"
                 open={idx === 0}
               >
-                <summary className="flex cursor-pointer list-none select-none items-center justify-between gap-4 px-6 py-5 font-heading text-base font-semibold text-navy transition-colors hover:bg-navy/5 focus-visible:outline-2 focus-visible:outline-brand-ink">
+                <summary className="flex cursor-pointer list-none select-none items-center justify-between gap-4 px-6 py-5 font-heading text-base font-semibold text-navy transition-colors hover:bg-navy/3 focus-visible:outline-2 focus-visible:outline-brand-ink">
                   <span>{faq.q}</span>
                   <ChevronDown
                     className="h-4 w-4 shrink-0 text-navy/40 transition-transform duration-200 group-open:rotate-180 group-open:text-brand-ink"
                     aria-hidden="true"
                   />
                 </summary>
-                <div className="border-t border-navy/8 bg-white/50 px-6 py-4 text-sm leading-relaxed text-body">
+                <div className="border-t border-navy/8 bg-[#fafafa] px-6 py-4 text-sm leading-relaxed text-body">
                   {faq.a}
                 </div>
               </details>
@@ -426,9 +413,9 @@ export default function HomePage() {
       <Divider />
 
       {/* ══════════════════════════════════════════════════════════════════
-          CONTACT STRIP — Frosted glass cards
+          CONTACT STRIP — 2 cm vertical spacing
           ══════════════════════════════════════════════════════════════════ */}
-      <section className="relative py-[2cm]">
+      <section className="bg-[#f8f9fc] py-[2cm]">
         <Container>
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
             {[
@@ -454,7 +441,7 @@ export default function HomePage() {
               <a
                 key={label}
                 href={href}
-                className="group flex h-full items-center gap-4 rounded-2xl bg-white/85 p-6 shadow-md backdrop-blur-md ring-1 ring-white/60 transition-all hover:bg-white/95 hover:ring-brand-ink/40 hover:shadow-xl"
+                className="group flex h-full items-center gap-4 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-navy/8 transition-all hover:ring-brand-ink/30 hover:shadow-md"
               >
                 <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand/10 text-brand-ink transition-colors group-hover:bg-brand-ink group-hover:text-white">
                   <Icon className="h-5 w-5" aria-hidden="true" />
@@ -472,14 +459,14 @@ export default function HomePage() {
       <Divider />
 
       {/* ══════════════════════════════════════════════════════════════════
-          CTA BANNER SECTION — Cosmic dark glass banner
+          CTA BANNER SECTION — 2 cm vertical spacing
           ══════════════════════════════════════════════════════════════════ */}
-      <section className="relative py-[2cm]">
+      <section className="bg-white py-[2cm]">
         <Container>
-          <div className="relative overflow-hidden rounded-3xl bg-navy/90 px-8 py-12 shadow-2xl backdrop-blur-md sm:px-14 sm:py-16 lg:px-20 lg:py-16 border border-white/20">
+          <div className="relative overflow-hidden rounded-3xl bg-navy px-8 py-12 shadow-2xl sm:px-14 sm:py-16 lg:px-20 lg:py-16">
             {/* Blobs */}
-            <div aria-hidden="true" className="pointer-events-none absolute -right-20 -top-20 h-72 w-72 rounded-full bg-brand/25 blur-3xl" />
-            <div aria-hidden="true" className="pointer-events-none absolute -bottom-16 -left-8 h-56 w-56 rounded-full bg-royal/25 blur-3xl" />
+            <div aria-hidden="true" className="pointer-events-none absolute -right-20 -top-20 h-72 w-72 rounded-full bg-brand/15 blur-3xl" />
+            <div aria-hidden="true" className="pointer-events-none absolute -bottom-16 -left-8 h-56 w-56 rounded-full bg-royal/10 blur-3xl" />
             {/* Dot grid */}
             <div
               aria-hidden="true"
@@ -492,7 +479,7 @@ export default function HomePage() {
 
             <div className="relative z-10 flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
               <div className="max-w-xl">
-                <div className="inline-flex items-center gap-2 rounded-md bg-amber-400/20 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-amber-300">
+                <div className="inline-flex items-center gap-2 rounded-md bg-amber-400/15 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-amber-300">
                   <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
                   <span>Start Your Journey</span>
                 </div>
@@ -521,7 +508,7 @@ export default function HomePage() {
               </div>
             </div>
 
-            <p className="relative z-10 mt-6 text-xs text-white/50">{NO_GUARANTEE_DISCLAIMER}</p>
+            <p className="relative z-10 mt-6 text-xs text-white/40">{NO_GUARANTEE_DISCLAIMER}</p>
           </div>
         </Container>
       </section>

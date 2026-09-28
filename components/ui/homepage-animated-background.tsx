@@ -1,20 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Image from "next/image";
 
 export function HomePageAnimatedBackground() {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [reducedMotion, setReducedMotion] = useState(false);
-
-  // Mouse & Parallax tracking
-  const targetX = useRef(0);
-  const targetY = useRef(0);
-  const currentX = useRef(0);
-  const currentY = useRef(0);
-  const scrollY = useRef(0);
-  const rafId = useRef<number | null>(null);
 
   // Check reduced motion
   useEffect(() => {
@@ -25,54 +16,34 @@ export function HomePageAnimatedBackground() {
     return () => mq.removeEventListener("change", handler);
   }, []);
 
-  // Global mousemove and scroll tracking for parallax
+  // Mouse spotlight coordinates
   useEffect(() => {
     if (reducedMotion) return;
 
     const handleMouseMove = (e: MouseEvent) => {
-      const x = (e.clientX / window.innerWidth) * 2 - 1;
-      const y = (e.clientY / window.innerHeight) * 2 - 1;
-      targetX.current = Math.max(-1, Math.min(1, x));
-      targetY.current = Math.max(-1, Math.min(1, y));
-
       if (containerRef.current) {
         containerRef.current.style.setProperty("--mouse-x", `${e.clientX}px`);
         containerRef.current.style.setProperty("--mouse-y", `${e.clientY}px`);
+        containerRef.current.style.setProperty("--spotlight-opacity", "1");
       }
     };
 
-    const handleScroll = () => {
-      scrollY.current = window.scrollY;
+    const handleMouseLeave = () => {
+      if (containerRef.current) {
+        containerRef.current.style.setProperty("--spotlight-opacity", "0");
+      }
     };
 
     window.addEventListener("mousemove", handleMouseMove, { passive: true });
-    window.addEventListener("scroll", handleScroll, { passive: true });
-
-    // Smooth animation loop
-    const animate = () => {
-      currentX.current += (targetX.current - currentX.current) * 0.05;
-      currentY.current += (targetY.current - currentY.current) * 0.05;
-
-      const imgEl = containerRef.current?.querySelector<HTMLElement>(".fullpage-bg-image");
-      if (imgEl) {
-        const moveX = currentX.current * 18; // 18px range
-        const moveY = currentY.current * 12 + (scrollY.current * 0.03); // parallax on scroll
-        imgEl.style.transform = `scale(1.08) translate3d(${-moveX}px, ${-moveY}px, 0)`;
-      }
-
-      rafId.current = requestAnimationFrame(animate);
-    };
-
-    rafId.current = requestAnimationFrame(animate);
+    document.addEventListener("mouseleave", handleMouseLeave, { passive: true });
 
     return () => {
       window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("scroll", handleScroll);
-      if (rafId.current) cancelAnimationFrame(rafId.current);
+      document.removeEventListener("mouseleave", handleMouseLeave);
     };
   }, [reducedMotion]);
 
-  // Full-page constellation & cosmic particle canvas
+  // Full-page interactive constellation & particle hover animation
   useEffect(() => {
     if (reducedMotion) return;
 
@@ -94,27 +65,89 @@ export function HomePageAnimatedBackground() {
 
     window.addEventListener("resize", handleResize, { passive: true });
 
-    // Particle nodes for the constellation network
-    const count = Math.min(65, Math.floor((width * height) / 18000));
+    // Node count scaled to screen size
+    const count = Math.min(55, Math.floor((width * height) / 22000));
     const particles = Array.from({ length: count }, () => ({
       x: Math.random() * width,
       y: Math.random() * height,
-      vx: (Math.random() - 0.5) * 0.45,
-      vy: (Math.random() - 0.5) * 0.45,
-      radius: Math.random() * 2.2 + 0.8,
-      baseAlpha: Math.random() * 0.6 + 0.25,
+      vx: (Math.random() - 0.5) * 0.4,
+      vy: (Math.random() - 0.5) * 0.4,
+      radius: Math.random() * 2 + 1.2,
+      baseAlpha: Math.random() * 0.4 + 0.25,
+      // Brand innovation orange and royal blue
       color:
         Math.random() > 0.45
-          ? "255, 150, 40" // warm amber fire
-          : Math.random() > 0.5
-          ? "56, 189, 248" // electric cyan
-          : "255, 255, 255", // star white
-      pulseSpeed: Math.random() * 0.02 + 0.01,
+          ? "235, 94, 0" // Agnipankh Orange
+          : Math.random() > 0.4
+          ? "37, 99, 235" // Royal Blue
+          : "14, 165, 233", // Electric Cyan
+      pulseSpeed: Math.random() * 0.025 + 0.015,
       pulsePhase: Math.random() * Math.PI * 2,
     }));
 
-    // Shooting star streaks
-    interface ShootingStar {
+    // Interactive mouse trail sparks
+    interface MouseSpark {
+      x: number;
+      y: number;
+      vx: number;
+      vy: number;
+      life: number;
+      maxLife: number;
+      color: string;
+      size: number;
+    }
+    const mouseSparks: MouseSpark[] = [];
+
+    let mouseX = -1000;
+    let mouseY = -1000;
+    let lastMouseX = -1000;
+    let lastMouseY = -1000;
+    let isMouseMoving = false;
+    let mouseTimeout: NodeJS.Timeout;
+
+    const onMouseMove = (e: MouseEvent) => {
+      mouseX = e.clientX;
+      mouseY = e.clientY;
+      isMouseMoving = true;
+
+      // Spawn energetic sparks on mouse movement
+      if (lastMouseX !== -1000) {
+        const speed = Math.hypot(mouseX - lastMouseX, mouseY - lastMouseY);
+        if (speed > 4 && mouseSparks.length < 24) {
+          mouseSparks.push({
+            x: mouseX + (Math.random() - 0.5) * 10,
+            y: mouseY + (Math.random() - 0.5) * 10,
+            vx: (Math.random() - 0.5) * 1.5,
+            vy: (Math.random() - 0.5) * 1.5,
+            life: 0,
+            maxLife: Math.random() * 25 + 15,
+            color: Math.random() > 0.5 ? "235, 94, 0" : "37, 99, 235",
+            size: Math.random() * 2 + 1,
+          });
+        }
+      }
+
+      lastMouseX = mouseX;
+      lastMouseY = mouseY;
+
+      clearTimeout(mouseTimeout);
+      mouseTimeout = setTimeout(() => {
+        isMouseMoving = false;
+      }, 150);
+    };
+
+    const onMouseLeave = () => {
+      mouseX = -1000;
+      mouseY = -1000;
+      lastMouseX = -1000;
+      lastMouseY = -1000;
+    };
+
+    window.addEventListener("mousemove", onMouseMove, { passive: true });
+    window.addEventListener("mouseleave", onMouseLeave, { passive: true });
+
+    // Periodic shooting energy streak across the background
+    interface ShootingStreak {
       x: number;
       y: number;
       length: number;
@@ -124,79 +157,83 @@ export function HomePageAnimatedBackground() {
       life: number;
       maxLife: number;
     }
-    const shootingStars: ShootingStar[] = [];
+    const streaks: ShootingStreak[] = [];
 
-    const spawnShootingStar = () => {
-      if (shootingStars.length >= 2) return;
-      shootingStars.push({
+    const spawnStreak = () => {
+      if (streaks.length >= 2) return;
+      streaks.push({
         x: Math.random() * width,
-        y: Math.random() * (height * 0.5),
-        length: Math.random() * 80 + 50,
-        speed: Math.random() * 8 + 6,
-        angle: Math.PI / 4 + (Math.random() - 0.5) * 0.3,
-        alpha: 0.8,
+        y: Math.random() * (height * 0.6),
+        length: Math.random() * 90 + 60,
+        speed: Math.random() * 7 + 5,
+        angle: Math.PI / 4 + (Math.random() - 0.5) * 0.25,
+        alpha: 0.65,
         life: 0,
-        maxLife: Math.random() * 50 + 40,
+        maxLife: Math.random() * 45 + 35,
       });
     };
 
-    let nextStarTime = Date.now() + 2500;
-    let mouseX = -1000;
-    let mouseY = -1000;
-
-    const onMouseMove = (e: MouseEvent) => {
-      mouseX = e.clientX;
-      mouseY = e.clientY;
-    };
-
-    const onMouseLeave = () => {
-      mouseX = -1000;
-      mouseY = -1000;
-    };
-
-    window.addEventListener("mousemove", onMouseMove, { passive: true });
-    window.addEventListener("mouseleave", onMouseLeave, { passive: true });
+    let nextStreakTime = Date.now() + 3000;
 
     const render = () => {
       ctx.clearRect(0, 0, width, height);
 
-      // Spawn shooting stars periodically
-      if (Date.now() > nextStarTime) {
-        spawnShootingStar();
-        nextStarTime = Date.now() + Math.random() * 4500 + 2500;
+      // Periodic cosmic streak
+      if (Date.now() > nextStreakTime) {
+        spawnStreak();
+        nextStreakTime = Date.now() + Math.random() * 5000 + 3500;
       }
 
-      // Draw & update shooting stars
-      for (let s = shootingStars.length - 1; s >= 0; s--) {
-        const star = shootingStars[s];
-        star.x += Math.cos(star.angle) * star.speed;
-        star.y += Math.sin(star.angle) * star.speed;
-        star.life++;
+      // Draw & update streaks
+      for (let s = streaks.length - 1; s >= 0; s--) {
+        const str = streaks[s];
+        str.x += Math.cos(str.angle) * str.speed;
+        str.y += Math.sin(str.angle) * str.speed;
+        str.life++;
 
         const currentAlpha =
-          star.life < 10
-            ? (star.life / 10) * star.alpha
-            : ((star.maxLife - star.life) / (star.maxLife - 10)) * star.alpha;
+          str.life < 8
+            ? (str.life / 8) * str.alpha
+            : ((str.maxLife - str.life) / (str.maxLife - 8)) * str.alpha;
 
-        if (star.life >= star.maxLife) {
-          shootingStars.splice(s, 1);
+        if (str.life >= str.maxLife) {
+          streaks.splice(s, 1);
           continue;
         }
 
-        const tailX = star.x - Math.cos(star.angle) * star.length;
-        const tailY = star.y - Math.sin(star.angle) * star.length;
+        const tailX = str.x - Math.cos(str.angle) * str.length;
+        const tailY = str.y - Math.sin(str.angle) * str.length;
 
-        const grad = ctx.createLinearGradient(tailX, tailY, star.x, star.y);
-        grad.addColorStop(0, "rgba(255, 170, 50, 0)");
-        grad.addColorStop(0.7, `rgba(56, 189, 248, ${currentAlpha * 0.7})`);
-        grad.addColorStop(1, `rgba(255, 255, 255, ${currentAlpha})`);
+        const grad = ctx.createLinearGradient(tailX, tailY, str.x, str.y);
+        grad.addColorStop(0, "rgba(235, 94, 0, 0)");
+        grad.addColorStop(0.7, `rgba(37, 99, 235, ${currentAlpha * 0.7})`);
+        grad.addColorStop(1, `rgba(235, 94, 0, ${currentAlpha})`);
 
         ctx.beginPath();
         ctx.moveTo(tailX, tailY);
-        ctx.lineTo(star.x, star.y);
+        ctx.lineTo(str.x, str.y);
         ctx.strokeStyle = grad;
-        ctx.lineWidth = 1.8;
+        ctx.lineWidth = 1.6;
         ctx.stroke();
+      }
+
+      // Draw & update mouse trail sparks
+      for (let m = mouseSparks.length - 1; m >= 0; m--) {
+        const spark = mouseSparks[m];
+        spark.x += spark.vx;
+        spark.y += spark.vy;
+        spark.life++;
+
+        const sparkAlpha = (1 - spark.life / spark.maxLife) * 0.75;
+        if (spark.life >= spark.maxLife) {
+          mouseSparks.splice(m, 1);
+          continue;
+        }
+
+        ctx.beginPath();
+        ctx.arc(spark.x, spark.y, spark.size, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(${spark.color}, ${sparkAlpha})`;
+        ctx.fill();
       }
 
       // Draw & update constellation particles
@@ -211,25 +248,26 @@ export function HomePageAnimatedBackground() {
         if (p.y < 0) p.y = height;
         if (p.y > height) p.y = 0;
 
-        // Mouse interaction
+        // Interaction with mouse hover
         const dx = mouseX - p.x;
         const dy = mouseY - p.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
 
-        let dynamicAlpha = p.baseAlpha + Math.sin(p.pulsePhase) * 0.15;
+        let dynamicAlpha = p.baseAlpha + Math.sin(p.pulsePhase) * 0.12;
 
-        if (dist < 150) {
-          const force = (150 - dist) / 150;
-          p.x -= (dx / dist) * force * 1.2;
-          p.y -= (dy / dist) * force * 1.2;
-          dynamicAlpha = Math.min(1, dynamicAlpha + force * 0.5);
+        if (dist < 180) {
+          const force = (180 - dist) / 180;
+          // Gentle attraction/deflection to hover
+          p.x += (dx / dist) * force * 0.8;
+          p.y += (dy / dist) * force * 0.8;
+          dynamicAlpha = Math.min(0.95, p.baseAlpha + force * 0.55);
 
-          // Connector line to cursor
+          // Glowing connector line directly to cursor
           ctx.beginPath();
           ctx.moveTo(p.x, p.y);
           ctx.lineTo(mouseX, mouseY);
-          ctx.strokeStyle = `rgba(${p.color}, ${force * 0.4})`;
-          ctx.lineWidth = 1;
+          ctx.strokeStyle = `rgba(${p.color}, ${force * 0.45})`;
+          ctx.lineWidth = 1.2;
           ctx.stroke();
         }
 
@@ -237,23 +275,23 @@ export function HomePageAnimatedBackground() {
         for (let j = i + 1; j < particles.length; j++) {
           const p2 = particles[j];
           const d2 = Math.hypot(p.x - p2.x, p.y - p2.y);
-          if (d2 < 115) {
-            const lineAlpha = (1 - d2 / 115) * 0.28;
+          if (d2 < 120) {
+            const lineAlpha = (1 - d2 / 120) * 0.25;
             ctx.beginPath();
             ctx.moveTo(p.x, p.y);
             ctx.lineTo(p2.x, p2.y);
-            ctx.strokeStyle = `rgba(255, 160, 60, ${lineAlpha})`;
-            ctx.lineWidth = 0.9;
+            ctx.strokeStyle = `rgba(235, 94, 0, ${lineAlpha})`;
+            ctx.lineWidth = 0.85;
             ctx.stroke();
           }
         }
 
-        // Draw node star
+        // Draw particle dot
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
         ctx.fillStyle = `rgba(${p.color}, ${dynamicAlpha})`;
-        ctx.shadowColor = `rgba(${p.color}, 0.8)`;
-        ctx.shadowBlur = 8;
+        ctx.shadowColor = `rgba(${p.color}, 0.7)`;
+        ctx.shadowBlur = 6;
         ctx.fill();
         ctx.shadowBlur = 0;
       }
@@ -268,6 +306,7 @@ export function HomePageAnimatedBackground() {
       window.removeEventListener("resize", handleResize);
       window.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("mouseleave", onMouseLeave);
+      clearTimeout(mouseTimeout);
     };
   }, [reducedMotion]);
 
@@ -275,44 +314,23 @@ export function HomePageAnimatedBackground() {
     <div
       ref={containerRef}
       aria-hidden="true"
-      className="pointer-events-none fixed inset-0 z-0 overflow-hidden"
+      className="pointer-events-none fixed inset-0 z-10 overflow-hidden"
     >
-      {/* High-res background image with smooth parallax */}
+      {/* Interactive cursor spotlight that only shows and tracks on hover */}
       <div
-        className="fullpage-bg-image absolute -inset-8 transition-transform duration-300 ease-out will-change-transform"
+        className="pointer-events-none absolute inset-0 transition-opacity duration-500"
         style={{
-          transform: "scale(1.08)",
-          opacity: 0.94,
-        }}
-      >
-        <Image
-          src="/images/bg-wings-innovation.jpg"
-          alt="Giving Wings to Innovation background"
-          fill
-          sizes="100vw"
-          priority
-          className="object-cover object-center"
-        />
-      </div>
-
-      {/* Atmospheric veils: subtle depth without muddying the aerospace wing & constellations */}
-      <div className="absolute inset-0 bg-gradient-to-b from-navy/30 via-transparent to-navy/70" />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_var(--tw-gradient-stops))] from-amber-500/10 via-transparent to-transparent" />
-
-      {/* Interactive cursor spotlight */}
-      <div
-        className="pointer-events-none absolute inset-0 opacity-80 transition-opacity duration-300"
-        style={{
+          opacity: "var(--spotlight-opacity, 0.4)",
           background:
-            "radial-gradient(circle 500px at var(--mouse-x, 50vw) var(--mouse-y, 40vh), rgba(255, 120, 0, 0.18), rgba(56, 189, 248, 0.12), transparent 70%)",
+            "radial-gradient(circle 380px at var(--mouse-x, 50vw) var(--mouse-y, 40vh), rgba(255, 107, 0, 0.08), rgba(37, 99, 235, 0.05), transparent 70%)",
         }}
       />
 
-      {/* Interactive constellation & particle canvas */}
+      {/* Interactive constellation & particle canvas floating over content */}
       {!reducedMotion && (
         <canvas
           ref={canvasRef}
-          className="pointer-events-none fixed inset-0 z-[1] h-full w-full"
+          className="pointer-events-none fixed inset-0 h-full w-full"
         />
       )}
     </div>
