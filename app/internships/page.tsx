@@ -52,6 +52,7 @@ export default async function InternshipsPage({ searchParams }: InternshipsPageP
               src="/images/internship-showcase.jpg"
               alt="Agnipankh Tech Internship Showcase"
               fill
+              sizes="(max-width: 1200px) 100vw, 1200px"
               className="object-cover object-center opacity-30"
               priority
             />

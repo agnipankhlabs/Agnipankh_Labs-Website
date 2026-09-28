@@ -80,6 +80,7 @@ export function Footer() {
                 <li>
                   <Link
                     href="/internships"
+                    prefetch={true}
                     className="transition-colors hover:text-white hover:underline"
                   >
                     Internship Programs
@@ -87,7 +88,17 @@ export function Footer() {
                 </li>
                 <li>
                   <Link
+                    href="/courses"
+                    prefetch={true}
+                    className="transition-colors hover:text-white hover:underline"
+                  >
+                    Courses & Programs
+                  </Link>
+                </li>
+                <li>
+                  <Link
                     href="/training"
+                    prefetch={true}
                     className="transition-colors hover:text-white hover:underline"
                   >
                     Training Programs
@@ -96,6 +107,7 @@ export function Footer() {
                 <li>
                   <Link
                     href="/events"
+                    prefetch={true}
                     className="transition-colors hover:text-white hover:underline"
                   >
                     Events & Workshops
@@ -104,6 +116,7 @@ export function Footer() {
                 <li>
                   <Link
                     href="/ambassador/apply"
+                    prefetch={true}
                     className="transition-colors hover:text-white hover:underline"
                   >
                     Campus Ambassador Programme
@@ -111,34 +124,11 @@ export function Footer() {
                 </li>
                 <li>
                   <Link
-                    href="/services#certifications"
+                    href="/services"
+                    prefetch={true}
                     className="transition-colors hover:text-white hover:underline"
                   >
-                    Certifications
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="/services#live-projects"
-                    className="transition-colors hover:text-white hover:underline"
-                  >
-                    Live Projects
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="/services#career-guidance"
-                    className="transition-colors hover:text-white hover:underline"
-                  >
-                    Career Guidance
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="/services#mentorship"
-                    className="transition-colors hover:text-white hover:underline"
-                  >
-                    Mentorship
+                    Services & Development
                   </Link>
                 </li>
               </ul>
@@ -153,6 +143,7 @@ export function Footer() {
                 <li>
                   <Link
                     href="/about"
+                    prefetch={true}
                     className="transition-colors hover:text-white hover:underline"
                   >
                     About Us
@@ -161,6 +152,7 @@ export function Footer() {
                 <li>
                   <Link
                     href="/blog"
+                    prefetch={true}
                     className="transition-colors hover:text-white hover:underline"
                   >
                     Blog
@@ -169,6 +161,7 @@ export function Footer() {
                 <li>
                   <Link
                     href="/verify"
+                    prefetch={true}
                     className="inline-flex items-center gap-1.5 font-medium text-amber-400 hover:text-amber-300 hover:underline"
                   >
                     <span>Verify Certificate</span>
@@ -176,23 +169,8 @@ export function Footer() {
                 </li>
                 <li>
                   <Link
-                    href="/about#leadership"
-                    className="transition-colors hover:text-white hover:underline"
-                  >
-                    Leadership
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="/careers"
-                    className="transition-colors hover:text-white hover:underline"
-                  >
-                    Careers
-                  </Link>
-                </li>
-                <li>
-                  <Link
                     href="/contact"
+                    prefetch={true}
                     className="transition-colors hover:text-white hover:underline"
                   >
                     Contact Us

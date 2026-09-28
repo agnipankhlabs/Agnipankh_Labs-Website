@@ -91,6 +91,7 @@ export default function HomePage() {
             src="/images/hero-illustration.jpg"
             alt="Agnipankh Innovation Hub Background"
             fill
+            sizes="100vw"
             className="object-cover object-center opacity-25"
             priority
           />
@@ -134,6 +135,7 @@ export default function HomePage() {
             <div className="animate-fade-up delay-400 mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
               <Link
                 href={hero.ctas[0].href}
+                prefetch={true}
                 className="group inline-flex w-full items-center justify-center gap-2 rounded-xl bg-brand-ink px-7 py-3.5 text-sm font-semibold text-white shadow-md transition-all hover:bg-brand-hover hover:shadow-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-ink sm:w-auto"
               >
                 {hero.ctas[0].label}
@@ -144,6 +146,7 @@ export default function HomePage() {
               </Link>
               <Link
                 href={hero.ctas[1].href}
+                prefetch={true}
                 className="inline-flex w-full items-center justify-center rounded-xl border border-navy/20 bg-white/90 px-7 py-3.5 text-sm font-semibold text-navy shadow-2xs transition-all hover:border-navy/40 hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-ink sm:w-auto"
               >
                 {hero.ctas[1].label}

@@ -134,6 +134,8 @@ export default function AboutPage() {
                 alt="Agnipankh Innovation Lab Facilities & Workspace"
                 width={800}
                 height={450}
+                sizes="(max-width: 768px) 100vw, 800px"
+                loading="lazy"
                 className="w-full h-auto object-cover transition-transform hover:scale-105 duration-300"
               />
             </div>

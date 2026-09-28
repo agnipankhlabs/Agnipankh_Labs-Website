@@ -44,9 +44,11 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true },
 };
 
+import { Suspense } from "react";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import { ScrollRevealInit } from "@/components/ui/scroll-reveal-init";
+import { NavigationProgress } from "@/components/ui/navigation-progress";
 
 export default function RootLayout({
   children,
@@ -56,6 +58,9 @@ export default function RootLayout({
       <body
         className={`${poppins.variable} ${inter.variable} flex min-h-screen flex-col bg-surface text-navy antialiased`}
       >
+        <Suspense fallback={null}>
+          <NavigationProgress />
+        </Suspense>
         <a
           href="#main"
           className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-navy focus:px-4 focus:py-2 focus:text-white"

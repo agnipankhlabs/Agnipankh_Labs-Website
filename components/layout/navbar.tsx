@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   Menu,
   X,
@@ -71,6 +71,31 @@ export function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
+  const router = useRouter();
+
+  // Optimistic hover prefetch
+  const handlePrefetch = useCallback(
+    (href: string) => {
+      try {
+        router.prefetch(href);
+      } catch {
+        // Ignored
+      }
+    },
+    [router]
+  );
+
+  // Preload top offer links on dropdown hover
+  const handleDropdownHover = useCallback(() => {
+    setIsDropdownOpen(true);
+    WE_OFFER_ITEMS.forEach((item) => {
+      try {
+        router.prefetch(item.href);
+      } catch {
+        // Ignored
+      }
+    });
+  }, [router]);
 
   // Scroll-aware background
   useEffect(() => {
@@ -131,6 +156,8 @@ export function Navbar() {
           {/* 1. Left Block: Logo Image with Tagline Directly Underneath */}
           <Link
             href="/"
+            prefetch={true}
+            onMouseEnter={() => handlePrefetch("/")}
             className="group flex flex-col items-start justify-center gap-0.5 rounded-lg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand-ink"
             aria-label={`${SITE.name} - Home`}
           >
@@ -154,6 +181,8 @@ export function Navbar() {
             {/* Link 1: Home */}
             <Link
               href="/"
+              prefetch={true}
+              onMouseEnter={() => handlePrefetch("/")}
               className={cn(
                 "relative rounded-md px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-ink",
                 pathname === "/"
@@ -168,12 +197,13 @@ export function Navbar() {
             <div
               ref={dropdownRef}
               className="relative"
-              onMouseEnter={() => setIsDropdownOpen(true)}
+              onMouseEnter={handleDropdownHover}
               onMouseLeave={() => setIsDropdownOpen(false)}
             >
               <button
                 type="button"
                 onClick={() => setIsDropdownOpen((prev) => !prev)}
+                onMouseEnter={handleDropdownHover}
                 aria-haspopup="true"
                 aria-expanded={isDropdownOpen}
                 aria-controls="we-offer-dropdown"
@@ -218,6 +248,8 @@ export function Navbar() {
                           <Link
                             key={item.href}
                             href={item.href}
+                            prefetch={true}
+                            onMouseEnter={() => handlePrefetch(item.href)}
                             role="menuitem"
                             onClick={() => setIsDropdownOpen(false)}
                             className={cn(
@@ -231,7 +263,7 @@ export function Navbar() {
                               className={cn(
                                 "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors",
                                 isItemActive
-                                  ? "bg-brand-ink text-white"
+                                    ? "bg-brand-ink text-white"
                                   : "bg-navy/5 text-navy/70 group-hover:bg-brand/10 group-hover:text-brand-ink"
                               )}
                             >
@@ -257,6 +289,8 @@ export function Navbar() {
             {/* Link 3: About */}
             <Link
               href="/about"
+              prefetch={true}
+              onMouseEnter={() => handlePrefetch("/about")}
               className={cn(
                 "relative rounded-md px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-ink",
                 pathname === "/about"
@@ -270,6 +304,8 @@ export function Navbar() {
             {/* Link 4: Contact */}
             <Link
               href="/contact"
+              prefetch={true}
+              onMouseEnter={() => handlePrefetch("/contact")}
               className={cn(
                 "relative rounded-md px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-ink",
                 pathname === "/contact"
@@ -285,6 +321,8 @@ export function Navbar() {
           <div className="flex items-center gap-3">
             <Link
               href="/login"
+              prefetch={true}
+              onMouseEnter={() => handlePrefetch("/login")}
               className="inline-flex items-center justify-center rounded-xl bg-brand-ink px-4 py-2 text-sm font-semibold text-white shadow-xs hover:bg-brand-hover transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-ink"
             >
               Sign In
@@ -313,6 +351,7 @@ export function Navbar() {
             <nav className="flex flex-col gap-1" aria-label="Mobile Navigation">
               <Link
                 href="/"
+                prefetch={true}
                 className={cn(
                   "rounded-lg px-4 py-2.5 text-base font-medium transition-colors",
                   pathname === "/"
@@ -338,6 +377,7 @@ export function Navbar() {
                       <Link
                         key={item.href}
                         href={item.href}
+                        prefetch={true}
                         className={cn(
                           "flex items-center gap-3 rounded-lg px-4 py-2 text-sm font-medium transition-colors",
                           isActive
@@ -355,6 +395,7 @@ export function Navbar() {
 
               <Link
                 href="/about"
+                prefetch={true}
                 className={cn(
                   "rounded-lg px-4 py-2.5 text-base font-medium transition-colors",
                   pathname === "/about"
@@ -367,6 +408,7 @@ export function Navbar() {
 
               <Link
                 href="/contact"
+                prefetch={true}
                 className={cn(
                   "rounded-lg px-4 py-2.5 text-base font-medium transition-colors",
                   pathname === "/contact"
@@ -380,6 +422,7 @@ export function Navbar() {
               <div className="pt-4 px-2">
                 <Link
                   href="/login"
+                  prefetch={true}
                   className="flex w-full items-center justify-center rounded-xl bg-brand-ink px-4 py-2.5 text-sm font-semibold text-white shadow-xs hover:bg-brand-hover transition-colors"
                 >
                   Sign In

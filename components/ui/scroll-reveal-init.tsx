@@ -17,32 +17,39 @@ export function ScrollRevealInit() {
       "(prefers-reduced-motion: reduce)"
     ).matches;
 
+    let rafId: number | null = null;
     const observeElements = (observer?: IntersectionObserver) => {
-      const elements = document.querySelectorAll<HTMLElement>(
-        ".reveal:not(.revealed), .reveal-scale:not(.revealed)"
-      );
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        const elements = document.querySelectorAll<HTMLElement>(
+          ".reveal:not(.revealed), .reveal-scale:not(.revealed)"
+        );
+        if (!elements.length) return;
 
-      elements.forEach((el) => {
-        if (prefersReduced) {
-          el.classList.add("revealed");
-          return;
-        }
+        const vh = window.innerHeight;
+        elements.forEach((el) => {
+          if (prefersReduced) {
+            el.classList.add("revealed");
+            return;
+          }
 
-        // Check if element is already within viewport
-        const rect = el.getBoundingClientRect();
-        if (rect.top < window.innerHeight && rect.bottom > 0) {
-          el.classList.add("revealed");
-        } else if (observer) {
-          observer.observe(el);
-        } else {
-          el.classList.add("revealed");
-        }
+          const rect = el.getBoundingClientRect();
+          if (rect.top < vh && rect.bottom > 0) {
+            el.classList.add("revealed");
+          } else if (observer) {
+            observer.observe(el);
+          } else {
+            el.classList.add("revealed");
+          }
+        });
       });
     };
 
     if (prefersReduced || !("IntersectionObserver" in window)) {
       observeElements();
-      return;
+      return () => {
+        if (rafId) cancelAnimationFrame(rafId);
+      };
     }
 
     const observer = new IntersectionObserver(
@@ -57,15 +64,16 @@ export function ScrollRevealInit() {
       { threshold: 0.05, rootMargin: "0px 0px 50px 0px" }
     );
 
-    // Initial check & observe
+    // Initial check & observe immediately
     observeElements(observer);
 
-    // Small delay backup check for slow-hydrating or image-rendering components
-    const timer = setTimeout(() => observeElements(observer), 300);
-
-    // Observe DOM mutations for async loaded data
+    // Debounced mutation observer to catch async-rendered elements without spamming
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
     const mutationObserver = new MutationObserver(() => {
-      observeElements(observer);
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        observeElements(observer);
+      }, 100);
     });
 
     mutationObserver.observe(document.body, {
@@ -74,7 +82,8 @@ export function ScrollRevealInit() {
     });
 
     return () => {
-      clearTimeout(timer);
+      if (rafId) cancelAnimationFrame(rafId);
+      if (debounceTimer) clearTimeout(debounceTimer);
       observer.disconnect();
       mutationObserver.disconnect();
     };

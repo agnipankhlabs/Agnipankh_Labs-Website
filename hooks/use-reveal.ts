@@ -15,6 +15,8 @@ export function useReveal<T extends HTMLElement = HTMLElement>(
   options: IntersectionObserverInit = {}
 ) {
   const ref = useRef<T>(null);
+  const rootMargin = options.rootMargin ?? "0px 0px -40px 0px";
+  const threshold = options.threshold ?? 0.1;
 
   useEffect(() => {
     const el = ref.current;
@@ -36,12 +38,12 @@ export function useReveal<T extends HTMLElement = HTMLElement>(
           observer.disconnect();
         }
       },
-      { threshold: 0.1, rootMargin: "0px 0px -40px 0px", ...options }
+      { threshold, rootMargin }
     );
 
     observer.observe(el);
     return () => observer.disconnect();
-  }, [options]);
+  }, [rootMargin, threshold]);
 
   return ref;
 }
