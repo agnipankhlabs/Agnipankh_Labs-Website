@@ -61,6 +61,7 @@ import { Footer } from "@/components/layout/footer";
 import { ScrollRevealInit } from "@/components/ui/scroll-reveal-init";
 import { NavigationProgress } from "@/components/ui/navigation-progress";
 import { BackToTop } from "@/components/ui/back-to-top";
+import { InteractiveHoverParticles } from "@/components/ui/homepage-animated-background";
 
 export default function RootLayout({
   children,
@@ -70,6 +71,7 @@ export default function RootLayout({
       <body
         className={`${poppins.variable} ${inter.variable} flex min-h-screen flex-col bg-surface text-navy antialiased`}
       >
+        <InteractiveHoverParticles />
         <Suspense fallback={null}>
           <NavigationProgress />
         </Suspense>

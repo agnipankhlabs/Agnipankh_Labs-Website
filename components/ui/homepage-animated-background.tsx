@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-export function HomePageAnimatedBackground() {
+export function InteractiveHoverParticles() {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [reducedMotion, setReducedMotion] = useState(false);
@@ -336,3 +336,6 @@ export function HomePageAnimatedBackground() {
     </div>
   );
 }
+
+export const HomePageAnimatedBackground = InteractiveHoverParticles;
+

@@ -34,7 +34,6 @@ import {
   NO_GUARANTEE_DISCLAIMER,
 } from "@/content/marketing";
 import { Container } from "@/components/ui/layout";
-import { HomePageAnimatedBackground } from "@/components/ui/homepage-animated-background";
 
 const SERVICE_ICONS = [Briefcase, GraduationCap, Award, Code2, Compass, Users];
 const DIFF_ICONS = [CheckCircle2, Layers, TrendingUp, Laptop, Target, Users2];
@@ -77,10 +76,7 @@ function Divider() {
 
 export default function HomePage() {
   return (
-    <div className="relative">
-      {/* Interactive mouse hover constellation & particle animation layer */}
-      <HomePageAnimatedBackground />
-
+    <>
       {/* ══════════════════════════════════════════════════════════════════
           HERO SECTION — Clean soft gradient (no image), interactive hover
           ══════════════════════════════════════════════════════════════════ */}
@@ -512,6 +508,6 @@ export default function HomePage() {
           </div>
         </Container>
       </section>
-    </div>
+    </>
   );
 }
