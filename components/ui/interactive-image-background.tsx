@@ -9,6 +9,7 @@ interface InteractiveImageBackgroundProps {
   priority?: boolean;
   className?: string;
   variant?: "hero" | "light-glass" | "dark-deep" | "subtle";
+  imageOpacity?: number;
   enableParticles?: boolean;
   enableTilt?: boolean;
   enableSpotlight?: boolean;
@@ -22,6 +23,7 @@ export function InteractiveImageBackground({
   priority = false,
   className = "",
   variant = "hero",
+  imageOpacity = 0.92,
   enableParticles = true,
   enableTilt = true,
   enableSpotlight = true,
@@ -254,6 +256,7 @@ export function InteractiveImageBackground({
           className="interactive-bg-image absolute -inset-6 transition-transform duration-300 ease-out will-change-transform"
           style={{
             transform: "scale(1.06)",
+            opacity: imageOpacity,
           }}
         >
           <Image
@@ -275,8 +278,8 @@ export function InteractiveImageBackground({
             style={{
               background:
                 variant === "dark-deep"
-                  ? `radial-gradient(circle 380px at var(--mouse-px, 50%) var(--mouse-py, 50%), rgba(255, 120, 0, 0.22), rgba(37, 99, 235, 0.12), transparent 70%)`
-                  : `radial-gradient(circle 420px at var(--mouse-px, 50%) var(--mouse-py, 50%), rgba(255, 130, 0, 0.16), rgba(56, 189, 248, 0.08), transparent 70%)`,
+                  ? `radial-gradient(circle 420px at var(--mouse-px, 50%) var(--mouse-py, 50%), rgba(255, 120, 0, 0.28), rgba(37, 99, 235, 0.18), transparent 70%)`
+                  : `radial-gradient(circle 450px at var(--mouse-px, 50%) var(--mouse-py, 50%), rgba(255, 130, 0, 0.2), rgba(56, 189, 248, 0.12), transparent 70%)`,
             }}
           />
         )}
@@ -284,22 +287,21 @@ export function InteractiveImageBackground({
         {/* Variant specific overlays to guarantee text legibility & theme balance */}
         {variant === "hero" && (
           <>
-            {/* Blurry white luminous overlay for crisp text */}
-            <div className="absolute inset-0 bg-white/75 backdrop-blur-[3px]" />
-            <div className="absolute inset-0 bg-gradient-to-b from-white/92 via-white/65 to-surface" />
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-white/30 via-white/70 to-surface/90" />
-            {/* Ambient orange glow in the top-center */}
-            <div className="pointer-events-none absolute -top-24 left-1/2 h-80 w-[600px] -translate-x-1/2 rounded-full bg-brand/10 blur-3xl" />
+            {/* Soft transparent veil so the golden phoenix and lab remain vividly visible */}
+            <div className="absolute inset-0 bg-gradient-to-b from-white/30 via-transparent to-surface/70" />
+            <div className="absolute inset-0 bg-white/25 backdrop-blur-[0.5px]" />
+            <div className="pointer-events-none absolute -top-24 left-1/2 h-80 w-[600px] -translate-x-1/2 rounded-full bg-brand/15 blur-3xl" />
           </>
         )}
 
         {variant === "light-glass" && (
           <>
-            <div className="absolute inset-0 bg-[#f8f9fc]/82 backdrop-blur-[2px]" />
-            <div className="absolute inset-0 bg-gradient-to-b from-[#f8f9fc]/95 via-[#f8f9fc]/70 to-[#f8f9fc]" />
-            {/* Tech grid hint */}
+            {/* Light airy gradient allowing tech lab to show through clearly */}
+            <div className="absolute inset-0 bg-gradient-to-b from-[#f8f9fc]/40 via-transparent to-[#f8f9fc]/60" />
+            <div className="absolute inset-0 bg-white/15 backdrop-blur-[0.5px]" />
+            {/* Subtle grid hint */}
             <div
-              className="absolute inset-0 opacity-[0.035]"
+              className="absolute inset-0 opacity-[0.03]"
               style={{
                 backgroundImage:
                   "linear-gradient(#0f172a 1px, transparent 1px), linear-gradient(90deg, #0f172a 1px, transparent 1px)",
@@ -311,16 +313,15 @@ export function InteractiveImageBackground({
 
         {variant === "dark-deep" && (
           <>
-            <div className="absolute inset-0 bg-navy/88 backdrop-blur-[2px]" />
-            <div className="absolute inset-0 bg-gradient-to-r from-navy via-navy/80 to-navy/95" />
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-brand/15 via-transparent to-transparent" />
+            {/* Translucent dark veil keeping aerospace wing and constellations vibrant */}
+            <div className="absolute inset-0 bg-gradient-to-r from-navy/55 via-navy/25 to-navy/60" />
+            <div className="absolute inset-0 bg-black/15" />
           </>
         )}
 
         {variant === "subtle" && (
           <>
-            <div className="absolute inset-0 bg-white/88 backdrop-blur-[2px]" />
-            <div className="absolute inset-0 bg-gradient-to-b from-white via-white/80 to-white" />
+            <div className="absolute inset-0 bg-gradient-to-b from-white/30 via-transparent to-white/40" />
           </>
         )}
 

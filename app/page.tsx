@@ -89,6 +89,7 @@ export default function HomePage() {
         src="/images/bg-hero-phoenix.jpg"
         alt="Agnipankh Innovation Phoenix Lab"
         variant="hero"
+        imageOpacity={0.96}
         priority
         className="py-[2.5cm]"
         enableParticles={true}
@@ -97,7 +98,7 @@ export default function HomePage() {
         intensity={6}
       >
         <Container className="relative z-10">
-          <div className="mx-auto max-w-4xl text-center">
+          <div className="mx-auto max-w-4xl rounded-3xl bg-white/75 p-6 text-center shadow-xl backdrop-blur-md ring-1 ring-white/80 sm:p-10">
             {/* Logo — crisp and perfectly legible on blurry white */}
             <div className="mb-6 flex justify-center animate-fade-in">
               <Image
@@ -149,7 +150,7 @@ export default function HomePage() {
             </div>
 
             {/* Glassmorphic Trust strip — White Glass backdrop */}
-            <div className="animate-fade-up delay-500 mx-auto mt-14 grid max-w-3xl grid-cols-2 gap-4 rounded-2xl border border-navy/10 bg-white/85 p-6 backdrop-blur-md shadow-md sm:grid-cols-4 sm:gap-6">
+            <div className="animate-fade-up delay-500 mx-auto mt-14 grid max-w-3xl grid-cols-2 gap-4 rounded-2xl border border-navy/10 bg-white/90 p-6 backdrop-blur-md shadow-md sm:grid-cols-4 sm:gap-6">
               {[
                 { num: "Hands-On", sub: "Practical Learning" },
                 { num: "Modern", sub: "Industry Stacks" },
@@ -226,6 +227,7 @@ export default function HomePage() {
         src="/images/bg-tech-lab.jpg"
         alt="Agnipankh Tech Incubation and Robotics Lab"
         variant="light-glass"
+        imageOpacity={0.94}
         className="py-[2cm]"
         enableParticles={true}
         enableTilt={true}
@@ -487,6 +489,7 @@ export default function HomePage() {
             src="/images/bg-wings-innovation.jpg"
             alt="Giving Wings to Innovation Aerospace Hangar"
             variant="dark-deep"
+            imageOpacity={0.95}
             className="rounded-3xl shadow-2xl px-8 py-12 sm:px-14 sm:py-16 lg:px-20 lg:py-16 border border-white/10"
             enableParticles={true}
             enableTilt={true}
