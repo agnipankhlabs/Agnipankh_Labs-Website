@@ -1,3 +1,4 @@
+
 import sharp from "sharp";
 import fs from "fs";
 
@@ -33,14 +34,16 @@ async function generateFaviconAssets() {
    */
   function getSource(useMark = false) {
     if (useMark) {
-      return sharp(source).extract({
-        left: markLeft,
-        top: 0,
-        width: markSquare,
-        height: markSquare,
-      });
+      return sharp(source)
+        .extract({
+          left: markLeft,
+          top: 0,
+          width: markSquare,
+          height: markSquare,
+        })
+        .ensureAlpha();
     }
-    return sharp(source);
+    return sharp(source).ensureAlpha();
   }
 
   // 1. PNG icons
@@ -63,6 +66,7 @@ async function generateFaviconAssets() {
         fit: "contain",
         background: { r: 0, g: 0, b: 0, alpha: 1 },
       })
+      .ensureAlpha()
       .png({ compressionLevel: 9 })
       .toFile(item.file);
     console.log("Generated:", item.file, `(${item.size}x${item.size})`);
@@ -77,6 +81,7 @@ async function generateFaviconAssets() {
           fit: "contain",
           background: { r: 0, g: 0, b: 0, alpha: 1 },
         })
+        .ensureAlpha()
         .png()
         .toBuffer()
     )
